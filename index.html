@@ -301,8 +301,8 @@
     const listOverlay = document.getElementById('listOverlay');
     const songChecklist = document.getElementById('songChecklist');
 
-    // Build timestamp (helps verify latest GitHub deploy)
-    const BUILD_TIME = new Date().toLocaleString();
+    // Build timestamp (fixed at build/commit time – update this string when you compile)
+    const BUILD_TIME = '2026-01-29 07:45 UTC';
     const buildStampEl = document.getElementById('buildStamp');
     if (buildStampEl) buildStampEl.textContent = `Built: ${BUILD_TIME}`;
     const buildInlineEl = document.getElementById('buildInline');
@@ -489,13 +489,9 @@
           ctx.fillStyle = pat;
           ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
 
-          // subtle depth shading (no glare)
-          const shade = ctx.createRadialGradient(0, 0, woodRadius * 0.2, 0, 0, woodRadius);
-          shade.addColorStop(0, 'rgba(255,255,255,0.04)');
-          shade.addColorStop(0.7, 'rgba(0,0,0,0.00)');
-          shade.addColorStop(1, 'rgba(0,0,0,0.18)');
-          ctx.fillStyle = shade;
-          ctx.fillRect(-r, -r, r * 2, r * 2);
+          // uniform veneer shading removed to keep segment tone consistent
+          // (no per-slice darkening near rim)
+
 
           ctx.restore();
         } else {
@@ -647,14 +643,14 @@
       spinning = true;
       overlay.style.display = 'none';
 
-      // --- natural spin parameters tuned to ~5 seconds total ---
+      // --- natural spin parameters tuned to ~2.5 seconds total ---
       const start = performance.now();
 
-      // Initial angular velocity (rad/sec)
-      let omega = (7 + Math.random() * 2) * Math.PI; // strong but controlled start
+      // Initial angular velocity (rad/sec) – reduced
+      let omega = (5 + Math.random() * 1.5) * Math.PI;
 
-      // Friction tuned for ~5s decay, with tiny per-spin variation
-      const baseFriction = 0.982;
+      // Friction increased for faster decay, still with tiny per-spin variation
+      const baseFriction = 0.965;
       const friction = baseFriction + (Math.random() - 0.5) * 0.002;
 
       let lastTime = start;
