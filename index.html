@@ -435,7 +435,8 @@
 
       // Rim geometry
       const rimWidth = r * 0.035;
-      const woodRadius = r - rimWidth * 0.55; // extend wood to meet inner edge of rim
+      // Wood should extend fully to the rim (no blue gap)
+      const woodRadius = r; // extend wood to meet inner edge of rim
 
       // If textures haven't loaded yet, don't draw a half-baked wheel.
       if (!woodReady) return;
