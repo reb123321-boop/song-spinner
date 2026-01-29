@@ -512,7 +512,11 @@
       ctx.stroke();
 
       // centre hub – roulette-style brass dome with mahogany collar
+      // IMPORTANT: hub spins with the wheel
       ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+      ctx.translate(-cx, -cy);
 
       // mahogany collar (replaces grey ring)
       ctx.beginPath();
