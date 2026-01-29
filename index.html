@@ -53,16 +53,33 @@
 
     .pointer {
       position: absolute;
-      top: -16px; /* overlaps wheel but clears title */
+      top: -18px;
       left: 50%;
       transform: translateX(-50%);
       width: 0;
       height: 0;
       border-left: 22px solid transparent;
       border-right: 22px solid transparent;
-      border-top: 44px solid var(--pointer);
+      border-top: 46px solid #d4af37; /* brass */
       z-index: 5;
-      filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35));
+      filter:
+        drop-shadow(0 6px 6px rgba(0,0,0,0.45))
+        drop-shadow(0 2px 0 rgba(255,255,255,0.35));
+    }
+
+    .pointer::after {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: -44px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff3b0 0%, #f5d061 35%, #d4af37 60%, #8a6b1f 100%);
+      box-shadow:
+        0 3px 6px rgba(0,0,0,0.45),
+        inset 0 2px 3px rgba(255,255,255,0.6),
+        inset 0 -2px 3px rgba(0,0,0,0.35);
     }
 
     #wheelWrap {
@@ -494,14 +511,39 @@
       ctx.lineWidth = rimWidth;
       ctx.stroke();
 
-      // centre hub (very subtle, no glow)
+      // centre hub – roulette-style brass dome
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.045, 0, Math.PI * 2);
-      const hubGrad = ctx.createRadialGradient(cx, cy, r * 0.005, cx, cy, r * 0.05);
-      hubGrad.addColorStop(0, '#d1d5db');
-      hubGrad.addColorStop(1, '#6b7280');
+      ctx.arc(cx, cy, r * 0.065, 0, Math.PI * 2);
+      const hubGrad = ctx.createRadialGradient(
+        cx - r * 0.02,
+        cy - r * 0.02,
+        r * 0.01,
+        cx,
+        cy,
+        r * 0.07
+      );
+      hubGrad.addColorStop(0, '#fff3b0');
+      hubGrad.addColorStop(0.25, '#f5d061');
+      hubGrad.addColorStop(0.55, '#d4af37');
+      hubGrad.addColorStop(0.75, '#b08a2e');
+      hubGrad.addColorStop(1, '#6e5520');
       ctx.fillStyle = hubGrad;
       ctx.fill();
+
+      // subtle specular highlight
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.02, cy - r * 0.02, r * 0.018, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fill();
+
+      // fine shadow ring for separation
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.065, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = r * 0.003;
+      ctx.stroke();
+      ctx.restore();
     }
 
     function pickIndexForRotation(len) {
