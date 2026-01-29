@@ -482,7 +482,8 @@
 
       const arc = (2 * Math.PI) / vs.length;
       const rimWidth = r * 0.035;
-      const woodRadius = r; // wood reaches rim
+      // Draw wood slightly under the rim so the rim does not darken slice ends
+      const woodRadius = r - rimWidth * 0.5;
       const texturesAvailable = woodReady && woodPatterns.some(Boolean);
 
       // --- outer rim (raised bevel) ---
