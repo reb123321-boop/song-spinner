@@ -53,32 +53,32 @@
 
     .pointer {
       position: absolute;
-      top: -18px;
+      top: -28px;
       left: 50%;
       transform: translateX(-50%);
       width: 0;
       height: 0;
-      border-left: 22px solid transparent;
-      border-right: 22px solid transparent;
-      border-top: 46px solid #d4af37; /* brass */
+      border-left: 30px solid transparent;
+      border-right: 30px solid transparent;
+      border-top: 62px solid #d4af37; /* larger brass blade */
       z-index: 5;
       filter:
-        drop-shadow(0 6px 6px rgba(0,0,0,0.45))
-        drop-shadow(0 2px 0 rgba(255,255,255,0.35));
+        drop-shadow(0 8px 10px rgba(0,0,0,0.55))
+        drop-shadow(0 3px 0 rgba(255,255,255,0.35));
     }
 
     .pointer::after {
       content: '';
       position: absolute;
-      left: -10px;
-      top: -44px;
-      width: 20px;
-      height: 20px;
+      left: -12px;
+      top: -52px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #fff3b0 0%, #f5d061 35%, #d4af37 60%, #8a6b1f 100%);
+      background: radial-gradient(circle at 30% 30%, #f7e6a3 0%, #e6c45a 40%, #caa23a 70%, #7a5a18 100%);
       box-shadow:
         0 3px 6px rgba(0,0,0,0.45),
-        inset 0 2px 3px rgba(255,255,255,0.6),
+        inset 0 1px 2px rgba(255,255,255,0.45),
         inset 0 -2px 3px rgba(0,0,0,0.35);
     }
 
@@ -514,27 +514,27 @@
       // centre hub – roulette-style brass dome
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.065, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.048, 0, Math.PI * 2);
       const hubGrad = ctx.createRadialGradient(
-        cx - r * 0.02,
-        cy - r * 0.02,
-        r * 0.01,
+        cx - r * 0.015,
+        cy - r * 0.015,
+        r * 0.008,
         cx,
         cy,
-        r * 0.07
+        r * 0.055
       );
-      hubGrad.addColorStop(0, '#fff3b0');
-      hubGrad.addColorStop(0.25, '#f5d061');
-      hubGrad.addColorStop(0.55, '#d4af37');
-      hubGrad.addColorStop(0.75, '#b08a2e');
-      hubGrad.addColorStop(1, '#6e5520');
+      hubGrad.addColorStop(0, '#f3e6b3');
+      hubGrad.addColorStop(0.35, '#e1c76a');
+      hubGrad.addColorStop(0.65, '#c29a32');
+      hubGrad.addColorStop(0.85, '#9a7424');
+      hubGrad.addColorStop(1, '#5f4716');
       ctx.fillStyle = hubGrad;
       ctx.fill();
 
       // subtle specular highlight
       ctx.beginPath();
-      ctx.arc(cx - r * 0.02, cy - r * 0.02, r * 0.018, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.arc(cx - r * 0.018, cy - r * 0.018, r * 0.012, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
       ctx.fill();
 
       // fine shadow ring for separation
