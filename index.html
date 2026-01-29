@@ -54,7 +54,8 @@
       position: absolute;
       top: -28px;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translateX(-50%) rotate(0deg);
+      transform-origin: 50% 0%;
       width: 0;
       height: 0;
       border-left: 30px solid transparent;
@@ -64,6 +65,7 @@
       filter:
         drop-shadow(0 8px 10px rgba(0,0,0,0.55))
         drop-shadow(0 3px 0 rgba(255,255,255,0.35));
+      transition: transform 0.06s ease-out;
     }
 
     .pointer::after {
@@ -299,6 +301,8 @@
 
     // --- spinner sound ---
     const clickAudio = new Audio('sounds/click.mp3');
+    const pointerEl = document.querySelector('.pointer');
+    let pointerKick = 0;('sounds/click.mp3');
     clickAudio.volume = 0.5;
     let lastClickIndex = null;
     let lastSpunId = null;
@@ -479,18 +483,15 @@
         ctx.translate(cx, cy);
         ctx.rotate(a + arc / 2);
 
-        // Right-align so text ends at the rim curve
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
         const fontSize = Math.max(12, r * 0.05);
         ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
 
-        // End text just inside the rim
         const rimPadding = rimWidth * 1.2;
         const textRadius = woodRadius - rimPadding;
 
-        // subtle shadow then main text
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillText(s.display, textRadius, 1.5);
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -505,6 +506,39 @@
       ctx.strokeStyle = rimGrad;
       ctx.lineWidth = rimWidth;
       ctx.stroke();
+
+      // --- segment separator pins (3D brass rivets) ---
+      const pinRadius = r * 0.012;
+      const pinDistance = r - rimWidth * 0.6;
+
+      for (let i = 0; i < vs.length; i++) {
+        const ang = i * arc + rotation;
+        const px = cx + Math.cos(ang) * pinDistance;
+        const py = cy + Math.sin(ang) * pinDistance;
+
+        const pinGrad = ctx.createRadialGradient(
+          px - pinRadius * 0.4,
+          py - pinRadius * 0.4,
+          pinRadius * 0.2,
+          px,
+          py,
+          pinRadius
+        );
+        pinGrad.addColorStop(0, '#f5e6a6');
+        pinGrad.addColorStop(0.4, '#e0c36a');
+        pinGrad.addColorStop(0.75, '#b0892f');
+        pinGrad.addColorStop(1, '#6b4f18');
+
+        ctx.beginPath();
+        ctx.arc(px, py, pinRadius, 0, Math.PI * 2);
+        ctx.fillStyle = pinGrad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(px - pinRadius * 0.25, py - pinRadius * 0.25, pinRadius * 0.25, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+      }
 
       // centre hub – brass dome with mahogany collar (spins with wheel)
       ctx.save();
@@ -583,6 +617,14 @@
         // play click sound when passing a slice boundary
         const idxNow = pickIndexForRotation(vsNow.length);
         if (idxNow !== lastClickIndex) {
+          // pointer flex on pin hit
+          if (pointerEl) {
+            pointerKick = 8;
+            pointerEl.style.transform = `translateX(-50%) rotate(${pointerKick}deg)`;
+            setTimeout(() => {
+              pointerEl.style.transform = 'translateX(-50%) rotate(0deg)';
+            }, 60);
+          }
           lastClickIndex = idxNow;
           try {
             clickAudio.currentTime = 0;
