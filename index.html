@@ -511,38 +511,47 @@
       ctx.lineWidth = rimWidth;
       ctx.stroke();
 
-      // centre hub – roulette-style brass dome
+      // centre hub – roulette-style brass dome with mahogany collar
       ctx.save();
+
+      // mahogany collar (replaces grey ring)
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.048, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.075, 0, Math.PI * 2);
+      const mahoganyPat = woodPatterns.find((_, i) => woodTextures[i]?.name === 'mahogany') || woodPatterns[0];
+      if (mahoganyPat) {
+        ctx.fillStyle = mahoganyPat;
+        ctx.fill();
+      }
+
+      // subtle inner shadow to seat the pin
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = r * 0.004;
+      ctx.stroke();
+
+      // brass centre pin (smaller, less shiny)
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.042, 0, Math.PI * 2);
       const hubGrad = ctx.createRadialGradient(
-        cx - r * 0.015,
-        cy - r * 0.015,
-        r * 0.008,
+        cx - r * 0.01,
+        cy - r * 0.01,
+        r * 0.006,
         cx,
         cy,
-        r * 0.055
+        r * 0.05
       );
-      hubGrad.addColorStop(0, '#f3e6b3');
-      hubGrad.addColorStop(0.35, '#e1c76a');
-      hubGrad.addColorStop(0.65, '#c29a32');
-      hubGrad.addColorStop(0.85, '#9a7424');
-      hubGrad.addColorStop(1, '#5f4716');
+      hubGrad.addColorStop(0, '#ead9a0');
+      hubGrad.addColorStop(0.4, '#d2b55f');
+      hubGrad.addColorStop(0.75, '#a97f2a');
+      hubGrad.addColorStop(1, '#6b4f18');
       ctx.fillStyle = hubGrad;
       ctx.fill();
 
-      // subtle specular highlight
+      // very soft highlight only
       ctx.beginPath();
-      ctx.arc(cx - r * 0.018, cy - r * 0.018, r * 0.012, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.arc(cx - r * 0.012, cy - r * 0.012, r * 0.008, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fill();
 
-      // fine shadow ring for separation
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.065, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.lineWidth = r * 0.003;
-      ctx.stroke();
       ctx.restore();
     }
 
