@@ -57,8 +57,7 @@
       margin-left: 0.4em;
       vertical-align: middle;
       color: rgba(255,255,255,0.65);
-      text-shadow:
-        0 1px 0 rgba(0,0,0,0.6);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.6);
     }
 
     .pointer {
@@ -648,15 +647,15 @@
       spinning = true;
       overlay.style.display = 'none';
 
-      // --- natural spin parameters (inertia + friction) ---
+      // --- natural spin parameters tuned to ~5 seconds total ---
       const start = performance.now();
 
-      // initial angular velocity (rad/sec)
-      let omega = (6 + Math.random() * 3) * Math.PI; // fast start
+      // Initial angular velocity (rad/sec)
+      let omega = (7 + Math.random() * 2) * Math.PI; // strong but controlled start
 
-      // base friction with tiny random variation per spin
-      const baseFriction = 0.985;
-      const friction = baseFriction + (Math.random() - 0.5) * 0.004; // uniqueness per spin
+      // Friction tuned for ~5s decay, with tiny per-spin variation
+      const baseFriction = 0.982;
+      const friction = baseFriction + (Math.random() - 0.5) * 0.002;
 
       let lastTime = start;
 
@@ -676,23 +675,15 @@
 
         drawWheel();
 
-        // when very slow, bias to nearest pin and finish decisively
-        if (omega > 0.12) {
+        // when very slow, bias cleanly to nearest pin (no extra clack)
+        if (omega > 0.15) {
           requestAnimationFrame(anim);
         } else {
-          // snap rotation cleanly so pointer rests exactly on a pin
           const arc = (2 * Math.PI) / vsNow.length;
           const snappedIndex = pickIndexForRotation(vsNow.length);
           rotation = -Math.PI / 2 - arc * snappedIndex - arc / 2;
 
           drawWheel();
-
-          // heavier final clack
-          try {
-            clickAudio.currentTime = 0;
-            clickAudio.volume = 0.8;
-            clickAudio.play();
-          } catch (e) {}
 
           spinning = false;
 
