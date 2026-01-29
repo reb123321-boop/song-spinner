@@ -416,6 +416,10 @@
 
       const arc = (2 * Math.PI) / vs.length;
 
+      // Rim geometry
+      const rimWidth = r * 0.035;
+      const woodRadius = r - rimWidth * 0.55; // extend wood to meet inner edge of rim
+
       // If textures haven't loaded yet, don't draw a half-baked wheel.
       if (!woodReady) return;
 
@@ -433,7 +437,7 @@
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         // draw slices exactly to the rim radius
-        ctx.arc(cx, cy, r, a, a + arc);
+        ctx.arc(cx, cy, woodRadius, a, a + arc);
         ctx.closePath();
 
         const pat = woodPatterns[i % woodPatterns.length];
@@ -452,10 +456,10 @@
           ctx.scale(veneerScale, veneerScale);
 
           ctx.fillStyle = pat;
-          ctx.fillRect(-r, -r, r * 2, r * 2);
+          ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
 
           // very subtle shading to keep depth but avoid glare
-          const shade = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+          const shade = ctx.createRadialGradient(0, 0, woodRadius * 0.2, 0, 0, woodRadius);
           shade.addColorStop(0, 'rgba(255,255,255,0.04)');
           shade.addColorStop(0.7, 'rgba(0,0,0,0.00)');
           shade.addColorStop(1, 'rgba(0,0,0,0.18)');
@@ -476,9 +480,9 @@
 
         // engraved text effect tuned for real wood
         ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillText(s.display, r * 0.92, 1.5);
+        ctx.fillText(s.display, woodRadius * 0.94, 1.5);
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillText(s.display, r * 0.92, 0);
+        ctx.fillText(s.display, woodRadius * 0.94, 0);
 
         ctx.restore();
       });
@@ -487,7 +491,7 @@
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = rimGrad;
-      ctx.lineWidth = r * 0.035;
+      ctx.lineWidth = rimWidth;
       ctx.stroke();
 
       // centre hub (very subtle, no glow)
