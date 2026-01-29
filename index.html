@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Song Spinner 🎵</title>
+  <style>
+    :root {
+      --bg1: #1f2937;
+      --bg2: #020617;
+      --text: #f9fafb;
+      --btn: #22c55e;
+      --btnHover: #16a34a;
+      --btnAlt: #38bdf8;
+      --pointer: #facc15;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, var(--bg1), var(--bg2));
+      color: var(--text);
+      margin: 0;
+      padding: 0.5rem 0.75rem 1rem;
+    }
+
+    #app {
+      width: min(980px, 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h1 {
+      margin: 0.25rem 0 0.25rem;
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      text-align: center;
+    }
+
+    .pointer {
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 30px solid var(--pointer);
+      margin: 0.1rem 0 -0.35rem;
+      z-index: 2;
+    }
+
+    #wheelWrap {
+      position: relative;
+      width: 320px;
+      height: 320px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      display: block;
+    }
+
+    #overlayResult {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    #overlayCard {
+      background: rgba(2,6,23,0.85);
+      color: var(--text);
+      padding: 0.9rem 1.1rem;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      font-size: clamp(1.15rem, 3vw, 2.4rem);
+      font-weight: 900;
+      text-align: center;
+      max-width: 85%;
+      line-height: 1.1;
+    }
+
+    #controls {
+      width: min(720px, 100%);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 7.5rem;
+      padding: 0.6rem;
+      border-radius: 10px;
+      border: none;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 0.7rem 1.6rem;
+      font-size: 1.05rem;
+      border: none;
+      border-radius: 999px;
+      background: var(--btn);
+      color: white; /* unified text colour */
+      cursor: pointer;
+      font-weight: 800;
+      transition: background-color 0.15s ease;
+    }
+
+    button:hover {
+      filter: brightness(0.9);
+    }
+
+    /* Remove Last Song button */
+    #deselectLastBtn {
+      background-color: #e74c3c; /* warm red */
+      color: white;
+      border: none;
+    }
+
+    #deselectLastBtn:hover {
+      background-color: #c0392b;
+    }
+
+    #replaceBtn { background: var(--btnAlt); }
+
+    #toggleListBtn { background: #a78bfa; }
+
+    #result {
+      display: none; /* kept for debugging/backup; overlay is primary */
+      margin-top: 0.25rem;
+      font-size: 1.6rem;
+      font-weight: 800;
+      text-align: center;
+      min-height: 1.8em;
+    }
+
+    #hint {
+      opacity: 0.85;
+      font-size: 0.95rem;
+      text-align: center;
+      margin: 0;
+    }
+
+    /* Song visibility overlay */
+    #listOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,0.85);
+      z-index: 10;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    #listPanel {
+      background: #020617;
+      padding: 1rem;
+      border-radius: 14px;
+      width: min(720px, 100%);
+      max-height: min(85vh, 900px);
+      overflow: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+
+    #listPanel h2 {
+      margin: 0 0 0.6rem;
+    }
+
+    #songChecklist label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <h1 id="title">🎶 Song Spinner</h1>
+  <div class="pointer" aria-hidden="true"></div>
+
+  <div id="wheelWrap">
+    <canvas id="wheel"></canvas>
+    <div id="overlayResult">
+      <div id="overlayCard"><span id="overlayText"></span></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <p id="hint">Paste your songs (one per line). If a line contains “ - Artist”, only the title will be used.</p>
+    <textarea id="songInput" placeholder="Paste song list here (one per line)"></textarea>
+    <div class="row">
+      <button id="replaceBtn" type="button">Replace Songs</button>
+      <button id="spinBtn" type="button">SPIN</button>
+      <button id="toggleListBtn" type="button">Song List</button>
+      <button id="deselectLastBtn" type="button">Remove Last Song</button>
+    </div>
+    <div id="result"></div>
+  </div>
+</div>
+
+<!-- Song visibility overlay -->
+<div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
+  <div id="listPanel">
+    <h2>Song Visibility</h2>
+    <div id="songChecklist"></div>
+    <div id="listActions" style="position:sticky; bottom:0; background:#020617; padding-top:0.5rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+      <button id="selectAllBtn" type="button">Select All</button>
+      <button id="selectNoneBtn" type="button">Select None</button>
+      <button id="closeListBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Songs will be loaded from Google Sheet at runtime
+  let songs = [];
+
+  const wheelWrap = document.getElementById('wheelWrap');
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+
+  const spinBtn = document.getElementById('spinBtn');
+  const replaceBtn = document.getElementById('replaceBtn');
+  const resultDiv = document.getElementById('result');
+
+  const overlay = document.getElementById('overlayResult');
+  const overlayText = document.getElementById('overlayText');
+
+  const listOverlay = document.getElementById('listOverlay');
+  const toggleListBtn = document.getElementById('toggleListBtn');
+  const closeListBtn = document.getElementById('closeListBtn');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const selectNoneBtn = document.getElementById('selectNoneBtn');
+  const songChecklist = document.getElementById('songChecklist');
+
+  const titleEl = document.getElementById('title');
+  const pointerEl = document.querySelector('.pointer');
+  const controlsEl = document.getElementById('controls');
+
+  // Track visibility per song title
+  let songVisibility = {};
+
+  let cx = 0, cy = 0, radius = 0;
+  let rotation = 0;
+  let spinning = false;
+  let lastSpunSong = null;
+
+  function visibleSongs() {
+    return songs.filter(s => songVisibility[s] !== false);
+  }
+
+  function arcSize() {
+    const vs = visibleSongs();
+    return (2 * Math.PI) / Math.max(1, vs.length);
+  }
+
+  function wrapText(text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let offsetY = y;
+
+    for (let i = 0; i < words.length; i++) {
+      const test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > maxWidth && i > 0) {
+        ctx.fillText(line.trimEnd(), x, offsetY);
+        line = words[i] + ' ';
+        offsetY += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+
+    ctx.fillText(line.trimEnd(), x, offsetY);
+  }
+
+  function resizeCanvas() {
+    // Make the wheel as large as possible without pushing controls off-screen.
+    const verticalPadding = 24;
+
+    const nonWheelHeight =
+      (titleEl?.offsetHeight || 0) +
+      (pointerEl?.offsetHeight || 0) +
+      (controlsEl?.offsetHeight || 0) +
+      verticalPadding;
+
+    const availableHeight = Math.max(260, window.innerHeight - nonWheelHeight);
+    const availableWidth = Math.max(260, window.innerWidth - 32);
+
+    const size = Math.floor(Math.min(availableWidth, availableHeight, 980));
+
+    wheelWrap.style.width = `${size}px`;
+    wheelWrap.style.height = `${size}px`;
+
+    canvas.width = size;
+    canvas.height = size;
+
+    cx = canvas.width / 2;
+    cy = canvas.height / 2;
+    radius = canvas.width / 2;
+
+    drawWheel();
+  }
+
+  function drawWheel() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const vs = visibleSongs();
+    const arc = arcSize();
+
+    if (vs.length === 0) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.fillStyle = '#111827';
+      ctx.font = `bold ${Math.max(16, radius * 0.09)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('No songs', 0, 0);
+      ctx.restore();
+      return;
+    }
+
+    for (let i = 0; i < vs.length; i++) {
+      const sliceSong = vs[i];
+      const angle = i * arc + rotation;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, angle, angle + arc);
+      ctx.closePath();
+
+      const colors = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24'];
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle + arc / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#020617';
+
+      const fontSize = Math.max(10, radius * 0.045);
+      ctx.font = `bold ${fontSize}px sans-serif`;
+
+      const textX = radius - 12;
+      const maxWidth = radius - 22;
+      wrapText(sliceSong, textX, 0, maxWidth, fontSize + 2);
+
+      ctx.restore();
+    }
+  }
+
+  function winnerIndexFromRotation() {
+    const vs = visibleSongs();
+    if (vs.length === 0) return -1;
+
+    // Pointer is at the TOP of the wheel, pointing DOWN.
+    // Canvas angles start at 3 o'clock.
+    const arc = arcSize();
+    const pointerAngle = Math.PI / 2;
+    const normalized = (rotation + pointerAngle) % (2 * Math.PI);
+    return Math.floor((2 * Math.PI - normalized) / arc) % vs.length;
+  }
+
+  function spin() {
+    const vs = visibleSongs();
+    if (spinning || vs.length === 0) return;
+
+    spinning = true;
+    overlay.style.display = 'none';
+    resultDiv.textContent = '';
+
+    const extraSpins = (Math.floor(Math.random() * 3) + 4) * 2 * Math.PI;
+    const finalOffset = Math.random() * 2 * Math.PI;
+
+    const start = performance.now();
+    const startRotation = rotation;
+    const duration = 3000;
+
+    function animate(time) {
+      const t = Math.min((time - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      rotation = startRotation + (extraSpins + finalOffset) * ease;
+      drawWheel();
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        spinning = false;
+        const idx = winnerIndexFromRotation();
+        const finalVisible = visibleSongs();
+        if (idx < 0 || idx >= finalVisible.length) return;
+
+        lastSpunSong = finalVisible[idx];
+        overlayText.textContent = lastSpunSong;
+        overlay.style.display = 'flex';
+        resultDiv.textContent = lastSpunSong;
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  function parseSongTitles(raw) {
+    return raw
+      .split(/[\r\n]+/)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => {
+        // If the line contains " - ", treat text before it as the title
+        // (works for "Title - Artist" as well as "Title - in Key - Artist")
+        const parts = line.split(' - ');
+        return (parts[0] || '').trim();
+      })
+      .filter(Boolean);
+  }
+
+  // Robust-ish CSV parsing for Google Sheet CSV (handles commas inside quotes)
+  function parseCSVLine(line) {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        // "" inside quotes -> literal "
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+
+  function parseCSV(csvText) {
+    // IMPORTANT: must be a valid regex; previously this got corrupted into an invalid literal.
+    const lines = csvText.split(/\r?\n/).map(l => l.trimEnd());
+    const nonEmpty = lines.filter(l => l.trim().length > 0);
+    return nonEmpty.map(parseCSVLine);
+  }
+
+  function rebuildChecklist() {
+    songChecklist.innerHTML = '';
+    const sorted = [...songs].sort((a, b) => a.localeCompare(b));
+
+    sorted.forEach(songTitle => {
+      const row = document.createElement('label');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = songVisibility[songTitle] !== false;
+      cb.addEventListener('change', () => {
+        songVisibility[songTitle] = cb.checked;
+        // Hide overlay result if it now references a hidden song
+        overlay.style.display = 'none';
+        drawWheel();
+      });
+
+      row.appendChild(cb);
+      row.appendChild(document.createTextNode(songTitle));
+      songChecklist.appendChild(row);
+    });
+  }
+
+  replaceBtn.addEventListener('click', () => {
+    const raw = document.getElementById('songInput').value.trim();
+    if (!raw) return;
+
+    const next = parseSongTitles(raw);
+    if (next.length === 0) return;
+
+    songs = next;
+    songVisibility = {};
+    songs.forEach(s => { songVisibility[s] = true; });
+
+    rebuildChecklist();
+    rotation = 0;
+    overlay.style.display = 'none';
+    resultDiv.textContent = '';
+
+    resizeCanvas();
+  });
+
+  spinBtn.addEventListener('click', spin);
+  window.addEventListener('resize', resizeCanvas);
+
+  const deselectLastBtn = document.getElementById('deselectLastBtn');
+  deselectLastBtn.addEventListener('click', () => {
+    if (!lastSpunSong) return;
+    songVisibility[lastSpunSong] = false;
+    lastSpunSong = null;
+    overlay.style.display = 'none';
+    rebuildChecklist();
+    drawWheel();
+  });
+
+  toggleListBtn.addEventListener('click', () => {
+    listOverlay.style.display = 'flex';
+  });
+
+  closeListBtn.addEventListener('click', () => {
+    listOverlay.style.display = 'none';
+  });
+
+  selectAllBtn.addEventListener('click', () => {
+    songs.forEach(s => { songVisibility[s] = true; });
+    rebuildChecklist();
+    drawWheel();
+  });
+
+  selectNoneBtn.addEventListener('click', () => {
+    songs.forEach(s => { songVisibility[s] = false; });
+    overlay.style.display = 'none';
+    rebuildChecklist();
+    drawWheel();
+  });
+
+  // --- Lightweight in-browser tests (console) ---
+  function runTests() {
+    const assert = (cond, msg) => {
+      if (!cond) throw new Error(`Test failed: ${msg}`);
+    };
+
+    // Parsing tests (manual paste)
+    assert(parseSongTitles('Hello - Adele').join('|') === 'Hello', 'Parses Title - Artist');
+    assert(parseSongTitles('Fix You - in E-flat - Coldplay')[0] === 'Fix You', 'Parses Title - in Key - Artist');
+    assert(parseSongTitles('  Yesterday  ')[0] === 'Yesterday', 'Trims whitespace');
+    assert(parseSongTitles('\n\nA\n\nB\n').length === 2, 'Ignores blank lines');
+
+    // CSV parsing tests
+    const csv1 = 'Song,Include\nA,TRUE\nB,FALSE\n';
+    const rows1 = parseCSV(csv1);
+    assert(rows1.length === 3, 'CSV rows include header + 2');
+    assert(rows1[1][0] === 'A' && rows1[1][1] === 'TRUE', 'CSV basic row parse');
+    assert(rows1[2][0] === 'B' && rows1[2][1] === 'FALSE', 'CSV basic row parse 2');
+
+    const csv2 = 'Song,Include\n"Hello, World",TRUE\n';
+    const rows2 = parseCSV(csv2);
+    assert(rows2[1][0] === 'Hello, World', 'CSV handles commas in quotes');
+
+    // Visibility tests
+    const savedSongs = songs.slice();
+    const savedVis = { ...songVisibility };
+
+    songs = ['A', 'B', 'C'];
+    songVisibility = { A: true, B: false, C: true };
+    assert(visibleSongs().join('|') === 'A|C', 'visibleSongs filters hidden songs');
+
+    rotation = 0;
+    const idx = winnerIndexFromRotation();
+    assert(idx >= 0 && idx < visibleSongs().length, 'Winner index in range for visible songs');
+
+    songs = savedSongs;
+    songVisibility = savedVis;
+
+    console.info('Song Spinner tests: OK');
+  }
+
+  // Initialize from Google Sheet
+  const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/gviz/tq?tqx=out:csv&sheet=Songs';
+
+  async function loadSongsFromSheet() {
+    try {
+      const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const csv = await res.text();
+      const rows = parseCSV(csv);
+      if (rows.length === 0) throw new Error('Empty CSV');
+
+      const headers = rows[0].map(h => h.trim());
+      const songIdx = headers.findIndex(h => /song/i.test(h));
+      const includeIdx = headers.findIndex(h => /include/i.test(h));
+
+      if (songIdx < 0) throw new Error('Could not find a "Song" column in the Songs sheet');
+
+      songs = [];
+      songVisibility = {};
+
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i];
+        const title = (cols[songIdx] || '').replace(/^"|"$/g, '').trim();
+        if (!title) continue;
+
+        songs.push(title);
+
+        // Requirement: Include column controls initial checkbox state.
+        // Any row with FALSE/no/0 => start unchecked (but still present).
+        const includeValRaw = includeIdx >= 0 ? (cols[includeIdx] || '') : 'TRUE';
+        const includeVal = String(includeValRaw).replace(/^"|"$/g, '').trim();
+        songVisibility[title] = !/^false|no|0$/i.test(includeVal);
+      }
+
+      rebuildChecklist();
+      resizeCanvas();
+      drawWheel();
+    } catch (err) {
+      console.error('Failed to load songs from Google Sheet', err);
+      // Fallback: still render wheel + UI even if sheet load fails
+      resizeCanvas();
+      drawWheel();
+    }
+  }
+
+  // Boot
+  loadSongsFromSheet();
+  runTests();
+</script>
+
+</body>
+</html>
+
