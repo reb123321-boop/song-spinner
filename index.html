@@ -469,23 +469,26 @@
           ctx.fill();
         }
 
-        // ---- text (centred within slice) ----
+        // ---- text (radially justified to rim) ----
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(a + arc / 2);
 
-        ctx.textAlign = 'center';
+        // Right-align so text ends at the rim curve
+        ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
         const fontSize = Math.max(12, r * 0.05);
         ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
 
-        // centred within segment (avoid rim)
-        const textRadius = woodRadius * 0.72;
+        // End text just inside the rim
+        const rimPadding = rimWidth * 1.2;
+        const textRadius = woodRadius - rimPadding;
 
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        // subtle shadow then main text
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillText(s.display, textRadius, 1.5);
-        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.fillText(s.display, textRadius, 0);
 
         ctx.restore();
