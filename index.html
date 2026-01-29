@@ -50,6 +50,17 @@
         0 4px 8px rgba(0,0,0,0.45);
     }
 
+    .build-inline {
+      font-size: 0.2em; /* 1/5 the title size */
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-left: 0.4em;
+      vertical-align: middle;
+      color: rgba(255,255,255,0.65);
+      text-shadow:
+        0 1px 0 rgba(0,0,0,0.6);
+    }
+
     .pointer {
       position: absolute;
       top: -28px;
@@ -187,15 +198,11 @@
     }
 
     button { background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%); }
-
     .btn-link { background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 55%, #0ea5e9 100%); }
-
     button:hover, .btn-link:hover { filter: brightness(1.18) saturate(1.1); }
 
     #toggleListBtn { background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%); }
-
     #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
-
     #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
     button:active, .btn-link:active {
@@ -240,11 +247,22 @@
     }
 
     #songChecklist input[type="checkbox"] { transform: scale(1.1); }
+
+    #buildStamp {
+      position: fixed;
+      left: 10px;
+      bottom: 8px;
+      font-size: 0.75rem;
+      opacity: 0.55;
+      letter-spacing: 0.03em;
+      pointer-events: none;
+      z-index: 50;
+    }
   </style>
 </head>
 <body>
   <div id="app">
-    <h1>🎶 Song Spinner</h1>
+    <h1>🎶 Song Spinner <span class="build-inline" id="buildInline"></span></h1>
 
     <div id="wheelWrap">
       <div class="pointer" aria-hidden="true"></div>
@@ -261,6 +279,8 @@
       </div>
     </div>
   </div>
+
+  <div id="buildStamp"></div>
 
   <div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
     <div id="listPanel">
@@ -282,6 +302,13 @@
     const listOverlay = document.getElementById('listOverlay');
     const songChecklist = document.getElementById('songChecklist');
 
+    // Build timestamp (helps verify latest GitHub deploy)
+    const BUILD_TIME = new Date().toLocaleString();
+    const buildStampEl = document.getElementById('buildStamp');
+    if (buildStampEl) buildStampEl.textContent = `Built: ${BUILD_TIME}`;
+    const buildInlineEl = document.getElementById('buildInline');
+    if (buildInlineEl) buildInlineEl.textContent = `(${BUILD_TIME})`;
+
     // Real wood textures (Level 1 veneer look).
     // Put these images in your GitHub Pages repo under /textures/...
     const woodTextures = [
@@ -298,15 +325,14 @@
     let songVisibility = {}; // { [id]: boolean }
     let rotation = 0;
     let spinning = false;
-
-    // --- spinner sound ---
-    const clickAudio = new Audio('sounds/click.mp3');
-    const pointerEl = document.querySelector('.pointer');
-    let pointerKick = 0;('sounds/click.mp3');
-    clickAudio.volume = 0.5;
-    let lastClickIndex = null;
     let lastSpunId = null;
     let didInitRotation = false; // align first song at 12 o'clock once per page load
+
+    // --- spinner sound + pointer flex ---
+    const clickAudio = new Audio('sounds/click.mp3');
+    clickAudio.volume = 0.5;
+    const pointerEl = document.querySelector('.pointer');
+    let lastClickIndex = null;
 
     // wood texture patterns (index-aligned with woodTextures)
     const woodImages = new Array(woodTextures.length).fill(null);
@@ -596,6 +622,24 @@
       return Math.floor(((2 * Math.PI - (rotation + Math.PI / 2)) % (2 * Math.PI)) / ((2 * Math.PI) / len));
     }
 
+    function pointerFlex(omegaRadPerSec) {
+      if (!pointerEl) return;
+      // Convert speed into a small flex angle (degrees)
+      const kickDeg = Math.max(3, Math.min(10, omegaRadPerSec * 0.6));
+      pointerEl.style.transform = `translateX(-50%) rotate(${kickDeg}deg)`;
+      setTimeout(() => {
+        pointerEl.style.transform = 'translateX(-50%) rotate(0deg)';
+      }, 50);
+    }
+
+    function playClick() {
+      try {
+        clickAudio.currentTime = 0;
+        // Will only succeed after a user gesture (SPIN click) — which is exactly our case.
+        clickAudio.play();
+      } catch (e) {}
+    }
+
     function spin() {
       lastClickIndex = null;
       const vsNow = visibleSongs();
@@ -604,39 +648,54 @@
       spinning = true;
       overlay.style.display = 'none';
 
-      const extra = (4 + Math.random() * 3) * 2 * Math.PI;
-      const target = Math.random() * 2 * Math.PI;
+      // --- natural spin parameters (inertia + friction) ---
       const start = performance.now();
-      const dur = 3000;
-      const startRot = rotation;
+
+      // initial angular velocity (rad/sec)
+      let omega = (6 + Math.random() * 3) * Math.PI; // fast start
+
+      // base friction with tiny random variation per spin
+      const baseFriction = 0.985;
+      const friction = baseFriction + (Math.random() - 0.5) * 0.004; // uniqueness per spin
+
+      let lastTime = start;
 
       (function anim(t) {
-        const p = Math.min((t - start) / dur, 1);
-        const e = 1 - Math.pow(1 - p, 3);
-        rotation = startRot + (extra + target) * e;
-        // play click sound when passing a slice boundary
+        const dt = Math.min((t - lastTime) / 1000, 0.05); // seconds
+        lastTime = t;
+
+        rotation += omega * dt;
+        omega *= Math.pow(friction, dt * 60); // frame-rate independent decay
+
         const idxNow = pickIndexForRotation(vsNow.length);
         if (idxNow !== lastClickIndex) {
-          // pointer flex on pin hit
-          if (pointerEl) {
-            pointerKick = 8;
-            pointerEl.style.transform = `translateX(-50%) rotate(${pointerKick}deg)`;
-            setTimeout(() => {
-              pointerEl.style.transform = 'translateX(-50%) rotate(0deg)';
-            }, 60);
-          }
           lastClickIndex = idxNow;
-          try {
-            clickAudio.currentTime = 0;
-            clickAudio.play();
-          } catch (e) {}
+          pointerFlex(omega);
+          playClick();
         }
+
         drawWheel();
 
-        if (p < 1) {
+        // when very slow, bias to nearest pin and finish decisively
+        if (omega > 0.12) {
           requestAnimationFrame(anim);
         } else {
+          // snap rotation cleanly so pointer rests exactly on a pin
+          const arc = (2 * Math.PI) / vsNow.length;
+          const snappedIndex = pickIndexForRotation(vsNow.length);
+          rotation = -Math.PI / 2 - arc * snappedIndex - arc / 2;
+
+          drawWheel();
+
+          // heavier final clack
+          try {
+            clickAudio.currentTime = 0;
+            clickAudio.volume = 0.8;
+            clickAudio.play();
+          } catch (e) {}
+
           spinning = false;
+
           const vs = visibleSongs();
           if (!vs.length) return;
 
@@ -742,6 +801,7 @@
         const ambiguous = titleCounts[s.title] > 1;
         const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
         songs.push({ id: s.id, title: s.title, artist: s.artist, display });
+        // Include column: add to list but unchecked when FALSE
         songVisibility[s.id] = s.include;
       });
 
@@ -752,7 +812,6 @@
 
     // --- Tests (run in console) ---
     function runTests() {
-      // IMPORTANT: tests must not mutate runtime state (songs/rotation/flags).
       const saved = {
         songs: songs.slice(),
         songVisibility: { ...songVisibility },
