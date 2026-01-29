@@ -9,11 +9,7 @@
       --bg1: #1f2937;
       --bg2: #020617;
       --text: #f9fafb;
-      --muted: rgba(255,255,255,0.75);
       --pointer: #facc15;
-      --ok: #22c55e;
-      --warn: #f59e0b;
-      --bad: #ef4444;
     }
 
     * { box-sizing: border-box; }
@@ -40,7 +36,7 @@
     }
 
     h1 {
-      margin: 0.25rem 0 0.25rem;
+      margin: 0.25rem 0 0.5rem;
       font-size: clamp(1.6rem, 3.5vw, 2.4rem);
       text-align: center;
       font-weight: 900;
@@ -53,24 +49,6 @@
         0 1px 0 rgba(255,255,255,0.25),
         0 2px 0 rgba(0,0,0,0.15),
         0 4px 8px rgba(0,0,0,0.45);
-    }
-
-    #status {
-      font-size: 0.95rem;
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 1.25rem;
-    }
-
-    #statusDot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.35);
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
     }
 
     .pointer {
@@ -92,7 +70,7 @@
       flex: 1;
       width: 100%;
       max-width: min(95vw, 1100px);
-      margin-top: 1.25rem;
+      margin-top: 1.5rem;
       margin-bottom: 1.25rem;
       aspect-ratio: 1 / 1;
       display: flex;
@@ -263,7 +241,6 @@
 <body>
   <div id="app">
     <h1>🎶 Song Spinner</h1>
-    <div id="status"><span id="statusDot"></span><span id="statusText">Loading songs…</span></div>
 
     <div id="wheelWrap">
       <div class="pointer" aria-hidden="true"></div>
@@ -300,11 +277,6 @@
     const overlayText = document.getElementById('overlayText');
     const listOverlay = document.getElementById('listOverlay');
     const songChecklist = document.getElementById('songChecklist');
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-
-    const SHEET_ID = '16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw';
-    const SHEET_TAB = 'Songs';
 
     // Real wood textures (Level 1 veneer look).
     // Put these images in your GitHub Pages repo under /textures/...
@@ -327,19 +299,13 @@
     let didInitRotation = false; // align first song at 12 o'clock once per page load
 
     // wood texture patterns
+    const woodImages = []; // Image objects
     const woodPatterns = []; // CanvasPattern objects (same order as woodTextures)
     let woodReady = false;
 
-    const CACHE_KEY = `songspinner_cache_${SHEET_ID}_${SHEET_TAB}`;
-
-    function setStatus(kind, msg) {
-      const colour = kind === 'ok' ? 'var(--ok)' : kind === 'warn' ? 'var(--warn)' : kind === 'bad' ? 'var(--bad)' : 'rgba(255,255,255,0.35)';
-      statusDot.style.background = colour;
-      statusText.textContent = msg;
-    }
-
     function loadWoodTextures() {
       woodReady = false;
+      woodImages.length = 0;
       woodPatterns.length = 0;
 
       return Promise.all(
@@ -347,11 +313,13 @@
           const img = new Image();
           img.src = w.src;
           img.onload = () => {
+            woodImages.push(img);
             const p = ctx.createPattern(img, 'repeat');
             if (p) woodPatterns.push(p);
             resolve();
           };
           img.onerror = () => {
+            // Allow app to run even if a texture is missing
             console.warn(`Failed to load texture: ${w.src}`);
             resolve();
           };
@@ -367,7 +335,7 @@
       const parts = s.split(' - ');
       const title = (parts[0] || '').trim();
       const artist = parts.slice(1).join(' - ').trim();
-      return { title, artist };
+      return { title, artist, display: title };
     }
 
     function visibleSongs() {
@@ -446,15 +414,18 @@
       if (!vs.length) return;
 
       const arc = (2 * Math.PI) / vs.length;
+
+      // If textures haven't loaded yet, don't draw a half-baked wheel.
       if (!woodReady) return;
 
-      // outer rim bevel
+      // --- outer rim (raised bevel) ---
       const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
       rimGrad.addColorStop(0, 'rgba(255,255,255,0.0)');
       rimGrad.addColorStop(0.6, 'rgba(255,255,255,0.35)');
       rimGrad.addColorStop(0.85, 'rgba(255,255,255,0.65)');
       rimGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
 
+      // Slice render
       vs.forEach((s, i) => {
         const a = i * arc + rotation;
 
@@ -470,20 +441,22 @@
           ctx.save();
           ctx.clip();
 
+          // Align grain direction per slice (Level 1 veneer look)
           ctx.translate(cx, cy);
           ctx.rotate(a + (texCfg?.rotate || 0));
 
-          const veneerScale = 0.85; // grain density
+          // scale controls grain density on the wheel
+          const veneerScale = 0.85;
           ctx.scale(veneerScale, veneerScale);
 
           ctx.fillStyle = pat;
           ctx.fillRect(-r, -r, r * 2, r * 2);
 
-          // subtle depth, no glare
-          const shade = ctx.createRadialGradient(0, 0, r * 0.28, 0, 0, r);
-          shade.addColorStop(0, 'rgba(255,255,255,0.03)');
-          shade.addColorStop(0.7, 'rgba(0,0,0,0.00)');
-          shade.addColorStop(1, 'rgba(0,0,0,0.20)');
+          // very subtle shading to keep depth but avoid glare
+          const shade = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+          shade.addColorStop(0, 'rgba(255,255,255,0.05)');
+          shade.addColorStop(0.65, 'rgba(0,0,0,0.00)');
+          shade.addColorStop(1, 'rgba(0,0,0,0.22)');
           ctx.fillStyle = shade;
           ctx.fillRect(-r, -r, r * 2, r * 2);
 
@@ -499,7 +472,7 @@
         const fontSize = Math.max(12, r * 0.05);
         ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
 
-        // carved/embossed text
+        // engraved text effect tuned for real wood
         ctx.fillStyle = 'rgba(0,0,0,0.65)';
         ctx.fillText(s.display, r * 0.9, 1.5);
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -508,14 +481,14 @@
         ctx.restore();
       });
 
-      // rim highlight
+      // outer rim bevel highlight (wood extends fully beneath this)
       ctx.beginPath();
       ctx.arc(cx, cy, r * 0.985, 0, Math.PI * 2);
       ctx.strokeStyle = rimGrad;
       ctx.lineWidth = r * 0.03;
       ctx.stroke();
 
-      // hub
+      // centre hub (very subtle, no glow)
       ctx.beginPath();
       ctx.arc(cx, cy, r * 0.045, 0, Math.PI * 2);
       const hubGrad = ctx.createRadialGradient(cx, cy, r * 0.005, cx, cy, r * 0.05);
@@ -526,6 +499,7 @@
     }
 
     function pickIndexForRotation(len) {
+      // pointer is at top; adjust by +90deg (canvas 0 rad is 3 o'clock)
       return Math.floor(((2 * Math.PI - (rotation + Math.PI / 2)) % (2 * Math.PI)) / ((2 * Math.PI) / len));
     }
 
@@ -588,131 +562,14 @@
       const vs = visibleSongs();
       if (!vs.length) return;
       const arc = (2 * Math.PI) / vs.length;
+
+      // Place the centre of the first visible slice at 12 o'clock (top).
+      // Canvas 0 rad is 3 o'clock; 12 o'clock is -π/2.
+      // centre(slice0) = rotation + arc/2.
+      // Set rotation so: rotation + arc/2 = -π/2
       rotation = -Math.PI / 2 - arc / 2;
+
       didInitRotation = true;
-    }
-
-    // --- Sheet loading ---
-    function buildCsvUrls() {
-      // IMPORTANT:
-      // To avoid OS / browser network permission loops and Google auth prompts,
-      // we ONLY use the published CSV endpoint.
-      // The sheet must be published: File → Share → Publish to web → Sheet: Songs → CSV
-
-      const publishedCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?output=csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
-      return [publishedCsvUrl];
-    }
-
-    async function fetchWithFallback(urls) {
-      let lastErr = null;
-      for (const url of urls) {
-        try {
-          const res = await fetch(url, { cache: 'no-store', credentials: 'omit' });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return await res.text();
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-      throw lastErr || new Error('Failed to fetch');
-    }
-
-    function applySongsFromCsv(csv, sourceLabel) {
-      const rows = parseCSV(csv);
-      if (rows.length === 0) throw new Error('Sheet returned empty CSV');
-
-      const headers = rows[0].map(h => h.trim());
-      const songIdx = headers.findIndex(h => /song/i.test(h));
-      const incIdx = headers.findIndex(h => /include/i.test(h));
-      if (songIdx < 0) throw new Error('Could not find a "Song" column in the sheet');
-
-      const temp = [];
-      for (let i = 1; i < rows.length; i++) {
-        const cols = rows[i];
-        const meta = parseSongCell(cols[songIdx]);
-        if (!meta) continue;
-        const id = `${meta.title}__${meta.artist}__${i}`;
-        const incRaw = incIdx >= 0 ? cols[incIdx] : 'TRUE';
-        temp.push({ id, title: meta.title, artist: meta.artist, include: includeToChecked(incRaw) });
-      }
-
-      // Determine which titles are ambiguous
-      const titleCounts = {};
-      temp.forEach(s => { titleCounts[s.title] = (titleCounts[s.title] || 0) + 1; });
-
-      songs = [];
-      songVisibility = {};
-
-      temp.forEach(s => {
-        const ambiguous = titleCounts[s.title] > 1;
-        const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
-        songs.push({ id: s.id, title: s.title, artist: s.artist, display });
-        songVisibility[s.id] = s.include;
-      });
-
-      rebuildChecklist();
-      initRotationOnce();
-      drawWheel();
-
-      // cache last-good CSV so the app still works if fetch fails later
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), csv }));
-      } catch (_) {}
-
-      setStatus('ok', `Loaded ${songs.length} songs from Google Sheet (${sourceLabel}).`);
-    }
-
-    function applyFallbackSongs(reason) {
-      const fallback = [
-        { title: 'A Good Heart', artist: '' },
-        { title: 'Fix You', artist: 'Coldplay' },
-        { title: 'Yesterday', artist: '' },
-        { title: 'Stand By Me', artist: '' },
-        { title: 'I’m Gonna Be (500 Miles)', artist: '' }
-      ];
-
-      songs = fallback.map((s, idx) => ({
-        id: `${s.title}__${s.artist}__fallback__${idx}`,
-        title: s.title,
-        artist: s.artist,
-        display: s.artist ? `${s.title} – ${s.artist}` : s.title
-      }));
-
-      songVisibility = {};
-      songs.forEach(s => { songVisibility[s.id] = true; });
-
-      rebuildChecklist();
-      initRotationOnce();
-      drawWheel();
-
-      setStatus('warn', `Could not load Google Sheet (${reason}). Using a small fallback list.`);
-    }
-
-    async function loadSongs() {
-      setStatus('', 'Loading songs…');
-
-      // Try live sheet
-      try {
-        const urls = buildCsvUrls();
-        const csv = await fetchWithFallback(urls);
-        applySongsFromCsv(csv, 'live');
-        return;
-      } catch (e) {
-        console.warn('Live sheet fetch failed:', e);
-      }
-
-      // Try cache
-      try {
-        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-        if (cached && typeof cached.csv === 'string' && cached.csv.trim()) {
-          applySongsFromCsv(cached.csv, 'cached');
-          setStatus('warn', 'Using cached song list (live fetch failed).');
-          return;
-        }
-      } catch (_) {}
-
-      // Fallback
-      applyFallbackSongs('fetch failed');
     }
 
     // UI
@@ -742,8 +599,52 @@
       drawWheel();
     };
 
+    async function loadSongs() {
+      const url = 'https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/gviz/tq?tqx=out:csv&sheet=Songs';
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Failed to load sheet CSV (HTTP ${res.status})`);
+
+      const csv = await res.text();
+      const rows = parseCSV(csv);
+      if (rows.length === 0) return;
+
+      const headers = rows[0].map(h => h.trim());
+      const songIdx = headers.findIndex(h => /song/i.test(h));
+      const incIdx = headers.findIndex(h => /include/i.test(h));
+
+      const temp = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i];
+        const meta = parseSongCell(cols[songIdx]);
+        if (!meta) continue;
+        const id = `${meta.title}__${meta.artist}__${i}`;
+        const incRaw = incIdx >= 0 ? cols[incIdx] : 'TRUE';
+        temp.push({ id, ...meta, include: includeToChecked(incRaw) });
+      }
+
+      // Determine which titles are ambiguous
+      const titleCounts = {};
+      temp.forEach(s => { titleCounts[s.title] = (titleCounts[s.title] || 0) + 1; });
+
+      songs = [];
+      songVisibility = {};
+
+      temp.forEach(s => {
+        const ambiguous = titleCounts[s.title] > 1;
+        const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
+        songs.push({ id: s.id, title: s.title, artist: s.artist, display });
+        songVisibility[s.id] = s.include;
+      });
+
+      rebuildChecklist();
+      initRotationOnce();
+      drawWheel();
+    }
+
     // --- Tests (run in console) ---
     function runTests() {
+      // IMPORTANT: tests must not mutate runtime state (songs/rotation/flags).
       const saved = {
         songs: songs.slice(),
         songVisibility: { ...songVisibility },
@@ -756,27 +657,54 @@
       const assert = (cond, msg) => { if (!cond) throw new Error(`Test failed: ${msg}`); };
 
       try {
+        // wood texture config exists
         assert(Array.isArray(woodTextures) && woodTextures.length >= 3, 'woodTextures is defined');
 
-        const urls = buildCsvUrls();
-        assert(urls.length === 1 && urls[0].includes('/pub?output=csv'), 'Published CSV URL is built (single URL)');
-
+        // parseSongCell tests
         const p1 = parseSongCell('Fix You - Coldplay');
         assert(p1 && p1.title === 'Fix You' && p1.artist === 'Coldplay', 'parseSongCell splits Title - Artist');
+        const p2 = parseSongCell('Fix You - in E♭ - Coldplay');
+        assert(p2 && p2.title === 'Fix You' && p2.artist === 'in E♭ - Coldplay', 'parseSongCell preserves extra dash parts in artist');
 
+        // ambiguity / display tests
+        const mock = [
+          { id: '1', title: 'Yesterday', artist: '', include: true },
+          { id: '2', title: 'Fix You', artist: 'Coldplay', include: true },
+          { id: '3', title: 'Fix You', artist: 'Acoustic', include: true }
+        ];
+        const counts = {};
+        mock.forEach(s => counts[s.title] = (counts[s.title] || 0) + 1);
+        const displayFor = (title, artist) => (counts[title] > 1 && artist ? `${title} – ${artist}` : title);
+        assert(displayFor('Yesterday', '') === 'Yesterday', 'Unambiguous title omits artist');
+        assert(displayFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'Ambiguous title includes artist');
+
+        // includeToChecked tests
+        assert(includeToChecked('TRUE') === true, 'Include TRUE => checked');
+        assert(includeToChecked('FALSE') === false, 'Include FALSE => unchecked');
+        assert(includeToChecked('no') === false, 'Include no => unchecked');
+        assert(includeToChecked('0') === false, 'Include 0 => unchecked');
+
+        // CSV parsing tests (commas inside quotes)
         const rows = parseCSV('Song,Include\n"Hello, World - Someone",TRUE\n');
         assert(rows.length === 2 && rows[1][0] === 'Hello, World - Someone', 'parseCSV handles commas inside quotes');
 
-        assert(includeToChecked('FALSE') === false, 'Include FALSE => unchecked');
-        assert(includeToChecked('TRUE') === true, 'Include TRUE => checked');
+        // pickIndexForRotation sanity
+        rotation = 0;
+        assert(typeof pickIndexForRotation(10) === 'number', 'pickIndexForRotation returns a number');
 
-        const minimal = 'Song,Include\nA,TRUE\nB,FALSE\n';
-        applySongsFromCsv(minimal, 'test');
-        assert(songs.length === 2, 'applySongsFromCsv loads rows');
-        assert(visibleSongs().length === 1, 'Include column respected');
+        // initRotationOnce test (runs on sandboxed state)
+        songs = [
+          { id: 'a', title: 'A', artist: '', display: 'A' },
+          { id: 'b', title: 'B', artist: '', display: 'B' }
+        ];
+        songVisibility = { a: true, b: true };
+        didInitRotation = false;
+        initRotationOnce();
+        assert(didInitRotation === true, 'initRotationOnce sets flag');
 
         console.info('Song Spinner tests: OK');
       } finally {
+        // Restore runtime state
         songs = saved.songs;
         songVisibility = saved.songVisibility;
         rotation = saved.rotation;
@@ -786,17 +714,10 @@
       }
     }
 
-    // Boot
-    loadWoodTextures().then(() => {
-      if (!woodReady) {
-        setStatus('warn', 'Wood textures missing. Add /textures/*.jpg to your GitHub Pages repo.');
-      }
-      drawWheel();
-    });
-
+    // Boot: load textures and songs in parallel; drawWheel will render once both are ready.
+    loadWoodTextures().then(() => drawWheel());
     loadSongs().catch(err => {
       console.error(err);
-      setStatus('bad', `Song load failed: ${String(err?.message || err)}`);
       drawWheel();
     });
 
