@@ -438,8 +438,8 @@
       // Wood should extend fully to the rim (no blue gap)
       const woodRadius = r; // extend wood to meet inner edge of rim
 
-      // If textures haven't loaded yet, don't draw a half-baked wheel.
-      if (!woodReady) return;
+      // If textures haven't loaded yet, fall back to a neutral wood tone so the wheel still renders
+      const texturesAvailable = woodReady && woodPatterns.length > 0;
 
       // --- outer rim (raised bevel) ---
       const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
@@ -458,7 +458,7 @@
         ctx.arc(cx, cy, woodRadius, a, a + arc);
         ctx.closePath();
 
-        const pat = woodPatterns[i % woodPatterns.length];
+        const pat = texturesAvailable ? woodPatterns[i % woodPatterns.length] : null;
         const texCfg = woodTextures[i % woodTextures.length];
 
         if (pat) {
@@ -485,6 +485,11 @@
           ctx.fillRect(-r, -r, r * 2, r * 2);
 
           ctx.restore();
+        } else {
+          // fallback wood colour so wheel always renders
+          ctx.fillStyle = '#8b5a2b';
+          ctx.fill();
+        }
         }
 
         // text
@@ -504,7 +509,7 @@
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillText(s.display, textRadius, 1.5);
         ctx.fillStyle = 'rgba(255,255,255,0.88)';
-        ctx.fillText(s.display, textRadius,
+        ctx.fillText(s.display, textRadius, 0);
 
         ctx.restore();
       });
