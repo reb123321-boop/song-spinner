@@ -281,11 +281,13 @@
     // Real wood textures (Level 1 veneer look).
     // Put these images in your GitHub Pages repo under /textures/...
     const woodTextures = [
-      { name: 'oak', src: 'textures/oak.jpg' },
-      { name: 'walnut', src: 'textures/walnut.jpg' },
-      { name: 'maple', src: 'textures/maple.jpg' },
-      { name: 'cherry', src: 'textures/cherry.jpg' },
-      { name: 'mahogany', src: 'textures/mahogany.jpg' }
+      // rotation is in radians and controls grain direction per wood
+      // 0 = along slice, Math.PI/2 = across slice
+      { name: 'oak', src: 'textures/oak.jpg', rotate: 0 },
+      { name: 'walnut', src: 'textures/walnut.jpg', rotate: 0 },
+      { name: 'maple', src: 'textures/maple.jpg', rotate: Math.PI / 2 },
+      { name: 'cherry', src: 'textures/cherry.jpg', rotate: 0 },
+      { name: 'mahogany', src: 'textures/mahogany.jpg', rotate: 0 }
     ];
 
     // Wheel state
@@ -433,6 +435,7 @@
         ctx.closePath();
 
         const pat = woodPatterns[i % woodPatterns.length];
+        const texCfg = woodTextures[i % woodTextures.length];
 
         if (pat) {
           ctx.save();
@@ -440,7 +443,7 @@
 
           // Align grain direction per slice (Level 1 veneer look)
           ctx.translate(cx, cy);
-          ctx.rotate(a);
+          ctx.rotate(a + (texCfg?.rotate || 0));
 
           // scale controls grain density on the wheel
           const veneerScale = 0.85;
@@ -478,11 +481,11 @@
         ctx.restore();
       });
 
-      // outer rim bevel highlight
+      // outer rim bevel highlight (wood extends fully beneath this)
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.975, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.985, 0, Math.PI * 2);
       ctx.strokeStyle = rimGrad;
-      ctx.lineWidth = r * 0.045;
+      ctx.lineWidth = r * 0.03;
       ctx.stroke();
 
       // centre hub (very subtle, no glow)
