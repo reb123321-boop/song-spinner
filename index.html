@@ -10,7 +10,6 @@
       --bg2: #020617;
       --text: #f9fafb;
       --btn: #22c55e;
-      --btnHover: #16a34a;
       --btnAlt: #38bdf8;
       --pointer: #facc15;
     }
@@ -99,16 +98,6 @@
       margin-top: 0.25rem;
     }
 
-    textarea {
-      width: 100%;
-      min-height: 7.5rem;
-      padding: 0.6rem;
-      border-radius: 10px;
-      border: none;
-      font-family: inherit;
-      resize: vertical;
-    }
-
     .row {
       display: flex;
       gap: 0.5rem;
@@ -116,51 +105,58 @@
       justify-content: center;
     }
 
+    a { text-decoration: none; }
+
     button {
       padding: 0.7rem 1.6rem;
       font-size: 1.05rem;
       border: none;
       border-radius: 999px;
       background: var(--btn);
-      color: white; /* unified text colour */
+      color: white;
       cursor: pointer;
       font-weight: 800;
-      transition: background-color 0.15s ease;
+      transition: filter 0.15s ease;
     }
 
-    button:hover {
-      filter: brightness(0.9);
+    .btn-link {
+      padding: 0.7rem 1.6rem;
+      font-size: 1.05rem;
+      border-radius: 999px;
+      background: var(--btnAlt);
+      color: white;
+      cursor: pointer;
+      font-weight: 800;
+      display: inline-block;
+      transition: filter 0.15s ease;
     }
+
+    .btn-link:hover { filter: brightness(0.9); }
+
+    button:hover { filter: brightness(0.9); }
+
+    /* Edit List button */
+    #replaceBtn { background: var(--btnAlt); }
+
+    /* Toggle button */
+    #toggleListBtn { background: #a78bfa; }
 
     /* Remove Last Song button */
     #deselectLastBtn {
-      background-color: #e74c3c; /* warm red */
+      background-color: #e74c3c;
       color: white;
       border: none;
     }
 
-    #deselectLastBtn:hover {
-      background-color: #c0392b;
-    }
-
-    #replaceBtn { background: var(--btnAlt); }
-
-    #toggleListBtn { background: #a78bfa; }
+    #deselectLastBtn:hover { background-color: #c0392b; }
 
     #result {
-      display: none; /* kept for debugging/backup; overlay is primary */
+      display: none;
       margin-top: 0.25rem;
       font-size: 1.6rem;
       font-weight: 800;
       text-align: center;
       min-height: 1.8em;
-    }
-
-    #hint {
-      opacity: 0.85;
-      font-size: 0.95rem;
-      text-align: center;
-      margin: 0;
     }
 
     /* Song visibility overlay */
@@ -185,9 +181,7 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.45);
     }
 
-    #listPanel h2 {
-      margin: 0 0 0.6rem;
-    }
+    #listPanel h2 { margin: 0 0 0.6rem; }
 
     #songChecklist label {
       display: flex;
@@ -212,12 +206,10 @@
   </div>
 
   <div id="controls">
-    <p id="hint">Paste your songs (one per line). If a line contains “ - Artist”, only the title will be used.</p>
-    <textarea id="songInput" placeholder="Paste song list here (one per line)"></textarea>
     <div class="row">
-      <button id="replaceBtn" type="button">Replace Songs</button>
+      <a id="editListBtn" class="btn-link" href="https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Edit List</a>
+      <button id="toggleListBtn" type="button">Toggle Songs</button>
       <button id="spinBtn" type="button">SPIN</button>
-      <button id="toggleListBtn" type="button">Song List</button>
       <button id="deselectLastBtn" type="button">Remove Last Song</button>
     </div>
     <div id="result"></div>
@@ -246,7 +238,6 @@
   const ctx = canvas.getContext('2d');
 
   const spinBtn = document.getElementById('spinBtn');
-  const replaceBtn = document.getElementById('replaceBtn');
   const resultDiv = document.getElementById('result');
 
   const overlay = document.getElementById('overlayResult');
@@ -424,20 +415,6 @@
     requestAnimationFrame(animate);
   }
 
-  function parseSongTitles(raw) {
-    return raw
-      .split(/[\r\n]+/)
-      .map(line => line.trim())
-      .filter(Boolean)
-      .map(line => {
-        // If the line contains " - ", treat text before it as the title
-        // (works for "Title - Artist" as well as "Title - in Key - Artist")
-        const parts = line.split(' - ');
-        return (parts[0] || '').trim();
-      })
-      .filter(Boolean);
-  }
-
   // Robust-ish CSV parsing for Google Sheet CSV (handles commas inside quotes)
   function parseCSVLine(line) {
     const out = [];
@@ -467,10 +444,15 @@
   }
 
   function parseCSV(csvText) {
-    // IMPORTANT: must be a valid regex; previously this got corrupted into an invalid literal.
     const lines = csvText.split(/\r?\n/).map(l => l.trimEnd());
     const nonEmpty = lines.filter(l => l.trim().length > 0);
     return nonEmpty.map(parseCSVLine);
+  }
+
+  function includeToChecked(includeValRaw) {
+    const includeVal = String(includeValRaw ?? '').replace(/^"|"$/g, '').trim();
+    // Any row with FALSE/no/0 => start unchecked.
+    return !/^false|no|0$/i.test(includeVal);
   }
 
   function rebuildChecklist() {
@@ -485,7 +467,6 @@
       cb.checked = songVisibility[songTitle] !== false;
       cb.addEventListener('change', () => {
         songVisibility[songTitle] = cb.checked;
-        // Hide overlay result if it now references a hidden song
         overlay.style.display = 'none';
         drawWheel();
       });
@@ -495,25 +476,6 @@
       songChecklist.appendChild(row);
     });
   }
-
-  replaceBtn.addEventListener('click', () => {
-    const raw = document.getElementById('songInput').value.trim();
-    if (!raw) return;
-
-    const next = parseSongTitles(raw);
-    if (next.length === 0) return;
-
-    songs = next;
-    songVisibility = {};
-    songs.forEach(s => { songVisibility[s] = true; });
-
-    rebuildChecklist();
-    rotation = 0;
-    overlay.style.display = 'none';
-    resultDiv.textContent = '';
-
-    resizeCanvas();
-  });
 
   spinBtn.addEventListener('click', spin);
   window.addEventListener('resize', resizeCanvas);
@@ -555,12 +517,6 @@
       if (!cond) throw new Error(`Test failed: ${msg}`);
     };
 
-    // Parsing tests (manual paste)
-    assert(parseSongTitles('Hello - Adele').join('|') === 'Hello', 'Parses Title - Artist');
-    assert(parseSongTitles('Fix You - in E-flat - Coldplay')[0] === 'Fix You', 'Parses Title - in Key - Artist');
-    assert(parseSongTitles('  Yesterday  ')[0] === 'Yesterday', 'Trims whitespace');
-    assert(parseSongTitles('\n\nA\n\nB\n').length === 2, 'Ignores blank lines');
-
     // CSV parsing tests
     const csv1 = 'Song,Include\nA,TRUE\nB,FALSE\n';
     const rows1 = parseCSV(csv1);
@@ -571,6 +527,13 @@
     const csv2 = 'Song,Include\n"Hello, World",TRUE\n';
     const rows2 = parseCSV(csv2);
     assert(rows2[1][0] === 'Hello, World', 'CSV handles commas in quotes');
+
+    // Include interpretation tests
+    assert(includeToChecked('TRUE') === true, 'Include TRUE => checked');
+    assert(includeToChecked('FALSE') === false, 'Include FALSE => unchecked');
+    assert(includeToChecked('no') === false, 'Include no => unchecked');
+    assert(includeToChecked('0') === false, 'Include 0 => unchecked');
+    assert(includeToChecked('yes') === true, 'Include yes => checked');
 
     // Visibility tests
     const savedSongs = songs.slice();
@@ -618,11 +581,8 @@
 
         songs.push(title);
 
-        // Requirement: Include column controls initial checkbox state.
-        // Any row with FALSE/no/0 => start unchecked (but still present).
         const includeValRaw = includeIdx >= 0 ? (cols[includeIdx] || '') : 'TRUE';
-        const includeVal = String(includeValRaw).replace(/^"|"$/g, '').trim();
-        songVisibility[title] = !/^false|no|0$/i.test(includeVal);
+        songVisibility[title] = includeToChecked(includeValRaw);
       }
 
       rebuildChecklist();
@@ -643,4 +603,3 @@
 
 </body>
 </html>
-
