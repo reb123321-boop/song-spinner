@@ -149,14 +149,50 @@
     }
 
     #overlayCard {
-      background: rgba(2,6,23,0.85);
-      padding: 0.9rem 1.1rem;
-      border-radius: 14px;
-      font-size: clamp(1.15rem, 3vw, 2.4rem);
+      background: linear-gradient(180deg, rgba(18,18,18,0.9), rgba(2,6,23,0.96));
+      padding: 1.2rem 1.8rem;
+      border-radius: 20px;
+      font-size: clamp(1.4rem, 3.4vw, 2.8rem);
       font-weight: 900;
       text-align: center;
       max-width: min(90%, 900px);
       line-height: 1.15;
+      letter-spacing: 0.05em;
+      color: #f9fafb;
+      border: 2px solid rgba(212,175,55,0.9); /* brass edge */
+      text-shadow:
+        0 1px 0 rgba(255,255,255,0.45),
+        0 4px 10px rgba(0,0,0,0.65);
+      box-shadow:
+        0 2px 0 rgba(255,255,255,0.45) inset,
+        0 -4px 8px rgba(0,0,0,0.6) inset,
+        0 0 0 rgba(212,175,55,0.0),
+        0 26px 55px rgba(0,0,0,0.75);
+      transform: scale(0.7) translateY(18px) rotate(0deg);
+      opacity: 0;
+      animation: popIn 420ms cubic-bezier(.18,1.3,.4,1) forwards,
+                 glowPulse 700ms ease-out 380ms;
+    }
+
+    @keyframes glowPulse {
+      0%   { box-shadow: 0 0 0 rgba(212,175,55,0); }
+      40%  { box-shadow: 0 0 26px rgba(212,175,55,0.55); }
+      100% { box-shadow: 0 0 0 rgba(212,175,55,0); }
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.75) translateY(14px);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.08) translateY(-4px);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
     }
 
     #controls {
@@ -329,7 +365,9 @@
 
     // --- spinner sound + pointer flex ---
     const clickAudio = new Audio('sounds/click.mp3');
+    const winAudio = new Audio('sounds/win.mp3');
     clickAudio.volume = 0.5;
+    winAudio.volume = 0.6;
     const pointerEl = document.querySelector('.pointer');
     let lastClickIndex = null;
 
@@ -692,6 +730,17 @@
           lastSpunId = picked.id;
           overlayText.textContent = picked.display;
           overlay.style.display = 'flex';
+          try {
+            winAudio.currentTime = 0;
+            winAudio.play();
+          } catch(e) {}
+
+          // tiny celebratory tilt
+          const card = document.getElementById('overlayCard');
+          if (card) {
+            const tilt = (Math.random() - 0.5) * 6;
+            card.style.transform = `scale(1) rotate(${tilt}deg)`;
+          }
         }
       })(start);
     }
