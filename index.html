@@ -50,16 +50,6 @@
         0 4px 8px rgba(0,0,0,0.45);
     }
 
-    .build-inline {
-      font-size: 0.2em; /* 1/5 the title size */
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      margin-left: 0.4em;
-      vertical-align: middle;
-      color: rgba(255,255,255,0.65);
-      text-shadow: 0 1px 0 rgba(0,0,0,0.6);
-    }
-
     .pointer {
       position: absolute;
       top: -28px;
@@ -297,7 +287,7 @@
 </head>
 <body>
   <div id="app">
-    <h1>🎶 Song Spinner <span class="build-inline" id="buildInline"></span></h1>
+    <h1>🎶 Song Spinner</h1>
 
     <div id="wheelWrap">
       <div class="pointer" aria-hidden="true"></div>
@@ -315,7 +305,7 @@
     </div>
   </div>
 
-  <div id="buildStamp"></div>
+  <div id="buildStamp">Version __APP_VERSION__ · __BUILD_TIME__</div>
 
   <div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
     <div id="listPanel">
@@ -337,12 +327,15 @@
     const listOverlay = document.getElementById('listOverlay');
     const songChecklist = document.getElementById('songChecklist');
 
-    // Build timestamp (fixed at build/commit time – update this string when you compile)
-    const BUILD_TIME = '2026-01-29 07:45 UTC';
+    // Build info injected at deploy time (GitHub Actions)
+    // Placeholders are replaced during deployment.
+    const APP_VERSION = '__APP_VERSION__';
+    const BUILD_TIME = '__BUILD_TIME__';
+
     const buildStampEl = document.getElementById('buildStamp');
-    if (buildStampEl) buildStampEl.textContent = `Built: ${BUILD_TIME}`;
-    const buildInlineEl = document.getElementById('buildInline');
-    if (buildInlineEl) buildInlineEl.textContent = `(${BUILD_TIME})`;
+    if (buildStampEl) {
+      buildStampEl.textContent = `Version ${APP_VERSION} · ${BUILD_TIME}`;
+    }
 
     // Real wood textures (Level 1 veneer look).
     // Put these images in your GitHub Pages repo under /textures/...
@@ -527,10 +520,7 @@
           ctx.fillStyle = pat;
           ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
 
-          // uniform veneer shading removed to keep segment tone consistent
-          // (no per-slice darkening near rim)
-
-
+          // Uniform tone: no per-slice edge shading
           ctx.restore();
         } else {
           ctx.fillStyle = '#8b5a2b';
@@ -668,7 +658,6 @@
     function playClick() {
       try {
         clickAudio.currentTime = 0;
-        // Will only succeed after a user gesture (SPIN click) — which is exactly our case.
         clickAudio.play();
       } catch (e) {}
     }
@@ -684,10 +673,10 @@
       // --- natural spin parameters tuned to ~2.5 seconds total ---
       const start = performance.now();
 
-      // Initial angular velocity (rad/sec) – reduced
+      // Initial angular velocity (rad/sec)
       let omega = (5 + Math.random() * 1.5) * Math.PI;
 
-      // Friction increased for faster decay, still with tiny per-spin variation
+      // Friction for faster decay, still with tiny per-spin variation
       const baseFriction = 0.965;
       const friction = baseFriction + (Math.random() - 0.5) * 0.002;
 
@@ -730,10 +719,11 @@
           lastSpunId = picked.id;
           overlayText.textContent = picked.display;
           overlay.style.display = 'flex';
+
           try {
             winAudio.currentTime = 0;
             winAudio.play();
-          } catch(e) {}
+          } catch (e) {}
 
           // tiny celebratory tilt
           const card = document.getElementById('overlayCard');
@@ -770,7 +760,6 @@
       const arc = (2 * Math.PI) / vs.length;
 
       // Place the centre of the first visible slice at 12 o'clock (top).
-      // canvas 0 rad is 3 o'clock; 12 o'clock is -π/2.
       rotation = -Math.PI / 2 - arc / 2;
       didInitRotation = true;
     }
@@ -860,6 +849,10 @@
       const assert = (cond, msg) => { if (!cond) throw new Error(`Test failed: ${msg}`); };
 
       try {
+        // Build placeholders present
+        assert(typeof APP_VERSION === 'string' && APP_VERSION.length > 0, 'APP_VERSION placeholder exists');
+        assert(typeof BUILD_TIME === 'string' && BUILD_TIME.length > 0, 'BUILD_TIME placeholder exists');
+
         assert(Array.isArray(woodTextures) && woodTextures.length >= 3, 'woodTextures is defined');
         assert(Array.isArray(woodPatterns) && woodPatterns.length === woodTextures.length, 'woodPatterns index aligns with woodTextures');
 
