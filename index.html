@@ -491,16 +491,20 @@
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(a + arc / 2);
-        ctx.textAlign = 'right';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
         const fontSize = Math.max(12, r * 0.05);
         ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
 
+        // Radial position for text: centred within the wooden band
+        const textRadius = woodRadius * 0.78;
+
         // engraved text effect tuned for real wood
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillText(s.display, woodRadius * 0.94, 1.5);
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillText(s.display, woodRadius * 0.94, 0);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillText(s.display, textRadius, 1.5);
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillText(s.display, textRadius,
 
         ctx.restore();
       });
