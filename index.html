@@ -9,7 +9,6 @@
       --bg1: #1f2937;
       --bg2: #020617;
       --text: #f9fafb;
-      --pointer: #facc15;
     }
 
     * { box-sizing: border-box; }
@@ -60,7 +59,7 @@
       height: 0;
       border-left: 30px solid transparent;
       border-right: 30px solid transparent;
-      border-top: 62px solid #d4af37; /* larger brass blade */
+      border-top: 62px solid #d4af37; /* brass */
       z-index: 5;
       filter:
         drop-shadow(0 8px 10px rgba(0,0,0,0.55))
@@ -119,7 +118,6 @@
       position: relative;
       z-index: 2;
       display: block;
-      /* IMPORTANT: no white background so wood reaches the rim */
       background: transparent;
       border-radius: 50%;
       box-shadow:
@@ -186,29 +184,17 @@
         0 -1px 0 rgba(255,255,255,0.35);
     }
 
-    button {
-      background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%);
-    }
+    button { background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%); }
 
-    .btn-link {
-      background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 55%, #0ea5e9 100%);
-    }
+    .btn-link { background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 55%, #0ea5e9 100%); }
 
-    button:hover, .btn-link:hover {
-      filter: brightness(1.18) saturate(1.1);
-    }
+    button:hover, .btn-link:hover { filter: brightness(1.18) saturate(1.1); }
 
-    #toggleListBtn {
-      background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%);
-    }
+    #toggleListBtn { background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%); }
 
-    #deselectLastBtn {
-      background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%);
-    }
+    #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
 
-    #deselectLastBtn:hover {
-      filter: brightness(1.15) saturate(1.1);
-    }
+    #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
     button:active, .btn-link:active {
       transform: translateY(4px) scale(0.98);
@@ -251,9 +237,7 @@
       user-select: none;
     }
 
-    #songChecklist input[type="checkbox"] {
-      transform: scale(1.1);
-    }
+    #songChecklist input[type="checkbox"] { transform: scale(1.1); }
   </style>
 </head>
 <body>
@@ -300,7 +284,6 @@
     // Put these images in your GitHub Pages repo under /textures/...
     const woodTextures = [
       // rotation is in radians and controls grain direction per wood
-      // 0 = along slice, Math.PI/2 = across slice
       { name: 'oak', src: 'textures/oak.jpg', rotate: 0 },
       { name: 'walnut', src: 'textures/walnut.jpg', rotate: 0 },
       { name: 'maple', src: 'textures/maple.jpg', rotate: Math.PI / 2 },
@@ -316,34 +299,35 @@
     let lastSpunId = null;
     let didInitRotation = false; // align first song at 12 o'clock once per page load
 
-    // wood texture patterns
-    const woodImages = []; // Image objects
-    const woodPatterns = []; // CanvasPattern objects (same order as woodTextures)
+    // wood texture patterns (index-aligned with woodTextures)
+    const woodImages = new Array(woodTextures.length).fill(null);
+    const woodPatterns = new Array(woodTextures.length).fill(null);
     let woodReady = false;
 
     function loadWoodTextures() {
       woodReady = false;
-      woodImages.length = 0;
-      woodPatterns.length = 0;
+      for (let i = 0; i < woodImages.length; i++) woodImages[i] = null;
+      for (let i = 0; i < woodPatterns.length; i++) woodPatterns[i] = null;
 
       return Promise.all(
-        woodTextures.map(w => new Promise((resolve) => {
+        woodTextures.map((w, idx) => new Promise((resolve) => {
           const img = new Image();
           img.src = w.src;
           img.onload = () => {
-            woodImages.push(img);
+            woodImages[idx] = img;
             const p = ctx.createPattern(img, 'repeat');
-            if (p) woodPatterns.push(p);
+            woodPatterns[idx] = p || null;
             resolve();
           };
           img.onerror = () => {
-            // Allow app to run even if a texture is missing
             console.warn(`Failed to load texture: ${w.src}`);
+            woodImages[idx] = null;
+            woodPatterns[idx] = null;
             resolve();
           };
         }))
       ).then(() => {
-        woodReady = woodPatterns.length > 0;
+        woodReady = woodPatterns.some(Boolean);
       });
     }
 
@@ -432,14 +416,9 @@
       if (!vs.length) return;
 
       const arc = (2 * Math.PI) / vs.length;
-
-      // Rim geometry
       const rimWidth = r * 0.035;
-      // Wood should extend fully to the rim (no blue gap)
-      const woodRadius = r; // extend wood to meet inner edge of rim
-
-      // If textures haven't loaded yet, fall back to a neutral wood tone so the wheel still renders
-      const texturesAvailable = woodReady && woodPatterns.length > 0;
+      const woodRadius = r; // wood reaches rim
+      const texturesAvailable = woodReady && woodPatterns.some(Boolean);
 
       // --- outer rim (raised bevel) ---
       const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
@@ -448,35 +427,35 @@
       rimGrad.addColorStop(0.85, 'rgba(255,255,255,0.65)');
       rimGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
 
-      // Slice render
-      vs.forEach((s, i) => {
+      // Slices + text
+      for (let i = 0; i < vs.length; i++) {
+        const s = vs[i];
         const a = i * arc + rotation;
 
+        // slice clip path
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        // draw slices exactly to the rim radius
         ctx.arc(cx, cy, woodRadius, a, a + arc);
         ctx.closePath();
 
-        const pat = texturesAvailable ? woodPatterns[i % woodPatterns.length] : null;
+        const pat = texturesAvailable ? (woodPatterns[i % woodPatterns.length] || woodPatterns.find(Boolean)) : null;
         const texCfg = woodTextures[i % woodTextures.length];
 
         if (pat) {
           ctx.save();
           ctx.clip();
 
-          // Align grain direction per slice (Level 1 veneer look)
+          // Align grain direction per slice
           ctx.translate(cx, cy);
           ctx.rotate(a + (texCfg?.rotate || 0));
 
-          // scale controls grain density on the wheel
           const veneerScale = 0.9;
           ctx.scale(veneerScale, veneerScale);
 
           ctx.fillStyle = pat;
           ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
 
-          // very subtle shading to keep depth but avoid glare
+          // subtle depth shading (no glare)
           const shade = ctx.createRadialGradient(0, 0, woodRadius * 0.2, 0, 0, woodRadius);
           shade.addColorStop(0, 'rgba(255,255,255,0.04)');
           shade.addColorStop(0.7, 'rgba(0,0,0,0.00)');
@@ -486,63 +465,65 @@
 
           ctx.restore();
         } else {
-          // fallback wood colour so wheel always renders
           ctx.fillStyle = '#8b5a2b';
           ctx.fill();
         }
-        }
 
-        // text
+        // ---- text (centred within slice) ----
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(a + arc / 2);
+
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const fontSize = Math.max(12, r * 0.05);
         ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
 
-        // Radial position for text: centred within the wooden band
-        const textRadius = woodRadius * 0.78;
+        // centred within segment (avoid rim)
+        const textRadius = woodRadius * 0.72;
 
-        // engraved text effect tuned for real wood
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillText(s.display, textRadius, 1.5);
         ctx.fillStyle = 'rgba(255,255,255,0.88)';
         ctx.fillText(s.display, textRadius, 0);
 
         ctx.restore();
-      });
+      }
 
-      // outer rim bevel highlight (wood sits flush beneath this)
+      // outer rim highlight
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = rimGrad;
       ctx.lineWidth = rimWidth;
       ctx.stroke();
 
-      // centre hub – roulette-style brass dome with mahogany collar
-      // IMPORTANT: hub spins with the wheel
+      // centre hub – brass dome with mahogany collar (spins with wheel)
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(rotation);
       ctx.translate(-cx, -cy);
 
-      // mahogany collar (replaces grey ring)
+      const mahoganyIdx = woodTextures.findIndex(w => w.name === 'mahogany');
+      const mahoganyPat = (mahoganyIdx >= 0 ? woodPatterns[mahoganyIdx] : null) || woodPatterns.find(Boolean);
+
+      // mahogany collar
       ctx.beginPath();
       ctx.arc(cx, cy, r * 0.075, 0, Math.PI * 2);
-      const mahoganyPat = woodPatterns.find((_, i) => woodTextures[i]?.name === 'mahogany') || woodPatterns[0];
       if (mahoganyPat) {
         ctx.fillStyle = mahoganyPat;
         ctx.fill();
+      } else {
+        ctx.fillStyle = '#4a2a1a';
+        ctx.fill();
       }
 
-      // subtle inner shadow to seat the pin
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      // subtle inner shadow (no grey ring)
+      ctx.strokeStyle = 'rgba(0,0,0,0.30)';
       ctx.lineWidth = r * 0.004;
       ctx.stroke();
 
-      // brass centre pin (smaller, less shiny)
+      // brass pin (smaller, less shiny)
       ctx.beginPath();
       ctx.arc(cx, cy, r * 0.042, 0, Math.PI * 2);
       const hubGrad = ctx.createRadialGradient(
@@ -560,7 +541,6 @@
       ctx.fillStyle = hubGrad;
       ctx.fill();
 
-      // very soft highlight only
       ctx.beginPath();
       ctx.arc(cx - r * 0.012, cy - r * 0.012, r * 0.008, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
@@ -635,11 +615,8 @@
       const arc = (2 * Math.PI) / vs.length;
 
       // Place the centre of the first visible slice at 12 o'clock (top).
-      // Canvas 0 rad is 3 o'clock; 12 o'clock is -π/2.
-      // centre(slice0) = rotation + arc/2.
-      // Set rotation so: rotation + arc/2 = -π/2
+      // canvas 0 rad is 3 o'clock; 12 o'clock is -π/2.
       rotation = -Math.PI / 2 - arc / 2;
-
       didInitRotation = true;
     }
 
@@ -682,9 +659,9 @@
       const headers = rows[0].map(h => h.trim());
       const songIdx = headers.findIndex(h => /song/i.test(h));
       const incIdx = headers.findIndex(h => /include/i.test(h));
+      if (songIdx < 0) throw new Error('Could not find a Song column in the sheet');
 
       const temp = [];
-
       for (let i = 1; i < rows.length; i++) {
         const cols = rows[i];
         const meta = parseSongCell(cols[songIdx]);
@@ -728,16 +705,14 @@
       const assert = (cond, msg) => { if (!cond) throw new Error(`Test failed: ${msg}`); };
 
       try {
-        // wood texture config exists
         assert(Array.isArray(woodTextures) && woodTextures.length >= 3, 'woodTextures is defined');
+        assert(Array.isArray(woodPatterns) && woodPatterns.length === woodTextures.length, 'woodPatterns index aligns with woodTextures');
 
-        // parseSongCell tests
         const p1 = parseSongCell('Fix You - Coldplay');
         assert(p1 && p1.title === 'Fix You' && p1.artist === 'Coldplay', 'parseSongCell splits Title - Artist');
         const p2 = parseSongCell('Fix You - in E♭ - Coldplay');
         assert(p2 && p2.title === 'Fix You' && p2.artist === 'in E♭ - Coldplay', 'parseSongCell preserves extra dash parts in artist');
 
-        // ambiguity / display tests
         const mock = [
           { id: '1', title: 'Yesterday', artist: '', include: true },
           { id: '2', title: 'Fix You', artist: 'Coldplay', include: true },
@@ -749,21 +724,17 @@
         assert(displayFor('Yesterday', '') === 'Yesterday', 'Unambiguous title omits artist');
         assert(displayFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'Ambiguous title includes artist');
 
-        // includeToChecked tests
         assert(includeToChecked('TRUE') === true, 'Include TRUE => checked');
         assert(includeToChecked('FALSE') === false, 'Include FALSE => unchecked');
         assert(includeToChecked('no') === false, 'Include no => unchecked');
         assert(includeToChecked('0') === false, 'Include 0 => unchecked');
 
-        // CSV parsing tests (commas inside quotes)
         const rows = parseCSV('Song,Include\n"Hello, World - Someone",TRUE\n');
         assert(rows.length === 2 && rows[1][0] === 'Hello, World - Someone', 'parseCSV handles commas inside quotes');
 
-        // pickIndexForRotation sanity
         rotation = 0;
         assert(typeof pickIndexForRotation(10) === 'number', 'pickIndexForRotation returns a number');
 
-        // initRotationOnce test (runs on sandboxed state)
         songs = [
           { id: 'a', title: 'A', artist: '', display: 'A' },
           { id: 'b', title: 'B', artist: '', display: 'B' }
@@ -775,7 +746,6 @@
 
         console.info('Song Spinner tests: OK');
       } finally {
-        // Restore runtime state
         songs = saved.songs;
         songVisibility = saved.songVisibility;
         rotation = saved.rotation;
@@ -785,7 +755,7 @@
       }
     }
 
-    // Boot: load textures and songs in parallel; drawWheel will render once both are ready.
+    // Boot
     loadWoodTextures().then(() => drawWheel());
     loadSongs().catch(err => {
       console.error(err);
