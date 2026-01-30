@@ -472,6 +472,8 @@
       const cx = r;
       const cy = r;
 
+      // Ensure no interpolation darkening at edges
+      ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, cssSize, cssSize);
 
       const vs = visibleSongs();
@@ -512,7 +514,8 @@
           ctx.translate(cx, cy);
           ctx.rotate(a + (texCfg?.rotate || 0));
 
-          const veneerScale = 0.9;
+          // IMPORTANT: draw texture at full scale so it reaches the rim exactly
+          const veneerScale = 1;
           ctx.scale(veneerScale, veneerScale);
 
           ctx.fillStyle = pat;
@@ -547,11 +550,10 @@
         ctx.restore();
       }
 
-      // outer rim highlight – draw AFTER wood but BEHIND it so it never darkens the grain
+      // outer rim highlight – draw fully OUTSIDE the wood, never touching it
       ctx.save();
-      ctx.globalCompositeOperation = 'destination-over';
       ctx.beginPath();
-      ctx.arc(cx, cy, r - rimWidth * 0.5, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r + rimWidth * 0.5, 0, Math.PI * 2);
       ctx.strokeStyle = rimGrad;
       ctx.lineWidth = rimWidth;
       ctx.stroke();
