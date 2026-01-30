@@ -305,7 +305,7 @@
     </div>
   </div>
 
-  <div id="buildStamp">Version __APP_VERSION__ · __BUILD_TIME__</div>
+  <div id="buildStamp"></div>
 
   <div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
     <div id="listPanel">
@@ -327,14 +327,11 @@
     const listOverlay = document.getElementById('listOverlay');
     const songChecklist = document.getElementById('songChecklist');
 
-    // Build info injected at deploy time (GitHub Actions)
-    // Placeholders are replaced during deployment.
-    const APP_VERSION = '__APP_VERSION__';
-    const BUILD_TIME = '__BUILD_TIME__';
-
+    // Build info derived from deployed file timestamp (GitHub Pages friendly)
     const buildStampEl = document.getElementById('buildStamp');
     if (buildStampEl) {
-      buildStampEl.textContent = `Version ${APP_VERSION} · ${BUILD_TIME}`;
+      const deployedAt = new Date(document.lastModified);
+      buildStampEl.textContent = `Updated ${deployedAt.toLocaleString()}`;
     }
 
     // Real wood textures (Level 1 veneer look).
@@ -850,9 +847,11 @@
       const assert = (cond, msg) => { if (!cond) throw new Error(`Test failed: ${msg}`); };
 
       try {
-        // Build placeholders present
-        assert(typeof APP_VERSION === 'string' && APP_VERSION.length > 0, 'APP_VERSION placeholder exists');
-        assert(typeof BUILD_TIME === 'string' && BUILD_TIME.length > 0, 'BUILD_TIME placeholder exists');
+        // Build stamp should be populated with a human-friendly string.
+        const el = document.getElementById('buildStamp');
+        assert(!!el, 'buildStamp element exists');
+        assert(typeof el.textContent === 'string' && el.textContent.trim().length > 0, 'buildStamp text is not empty');
+        assert(/^Updated\s+/.test(el.textContent), 'buildStamp starts with "Updated"');
 
         assert(Array.isArray(woodTextures) && woodTextures.length >= 3, 'woodTextures is defined');
         assert(Array.isArray(woodPatterns) && woodPatterns.length === woodTextures.length, 'woodPatterns index aligns with woodTextures');
