@@ -52,7 +52,6 @@
 
     .pointer {
       position: absolute;
-      top: -28px;
       left: 50%;
       transform: translateX(-50%) rotate(0deg);
       transform-origin: 50% 0%;
@@ -124,8 +123,7 @@
       background: transparent;
       border-radius: 50%;
       /* Remove inset shadows that were darkening slice ends */
-      box-shadow:
-        0 28px 48px rgba(0,0,0,0.55);
+      box-shadow: 0 28px 48px rgba(0,0,0,0.55);
     }
 
     #overlayResult {
@@ -358,40 +356,16 @@
     const winAudio = new Audio('sounds/win.mp3');
     clickAudio.volume = 0.5;
     winAudio.volume = 0.6;
+
     const pointerEl = document.querySelector('.pointer');
+    const POINTER_TRIANGLE_HEIGHT = 62; // matches CSS border-top
+
     let lastClickIndex = null;
 
     // wood texture patterns (index-aligned with woodTextures)
     const woodImages = new Array(woodTextures.length).fill(null);
     const woodPatterns = new Array(woodTextures.length).fill(null);
     let woodReady = false;
-
-    function loadWoodTextures() {
-      woodReady = false;
-      for (let i = 0; i < woodImages.length; i++) woodImages[i] = null;
-      for (let i = 0; i < woodPatterns.length; i++) woodPatterns[i] = null;
-
-      return Promise.all(
-        woodTextures.map((w, idx) => new Promise((resolve) => {
-          const img = new Image();
-          img.src = w.src;
-          img.onload = () => {
-            woodImages[idx] = img;
-            const p = ctx.createPattern(img, 'repeat');
-            woodPatterns[idx] = p || null;
-            resolve();
-          };
-          img.onerror = () => {
-            console.warn(`Failed to load texture: ${w.src}`);
-            woodImages[idx] = null;
-            woodPatterns[idx] = null;
-            resolve();
-          };
-        }))
-      ).then(() => {
-        woodReady = woodPatterns.some(Boolean);
-      });
-    }
 
     function parseSongCell(raw) {
       const s = String(raw ?? '').replace(/^"|"$/g, '').trim();
@@ -467,6 +441,46 @@
       return { cssSize, r: cssSize / 2 };
     }
 
+    function positionPointer(rimWidthPx) {
+      if (!pointerEl) return;
+      const wrap = document.getElementById('wheelWrap');
+      const canvasRect = canvas.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+
+      // We want the TIP to sit just inside the rim (between the pins)
+      const tipInset = rimWidthPx * 0.55; // nudge inside rim stroke
+      const top = (canvasRect.top - wrapRect.top) - POINTER_TRIANGLE_HEIGHT + tipInset;
+
+      pointerEl.style.top = `${top}px`;
+    }
+
+    function loadWoodTextures() {
+      woodReady = false;
+      for (let i = 0; i < woodImages.length; i++) woodImages[i] = null;
+      for (let i = 0; i < woodPatterns.length; i++) woodPatterns[i] = null;
+
+      return Promise.all(
+        woodTextures.map((w, idx) => new Promise((resolve) => {
+          const img = new Image();
+          img.src = w.src;
+          img.onload = () => {
+            woodImages[idx] = img;
+            const p = ctx.createPattern(img, 'repeat');
+            woodPatterns[idx] = p || null;
+            resolve();
+          };
+          img.onerror = () => {
+            console.warn(`Failed to load texture: ${w.src}`);
+            woodImages[idx] = null;
+            woodPatterns[idx] = null;
+            resolve();
+          };
+        }))
+      ).then(() => {
+        woodReady = woodPatterns.some(Boolean);
+      });
+    }
+
     function drawWheel() {
       const { cssSize, r } = ensureSquareCanvasToWrapper();
       const cx = r;
@@ -477,13 +491,21 @@
       ctx.clearRect(0, 0, cssSize, cssSize);
 
       const vs = visibleSongs();
-      if (!vs.length) return;
+      if (!vs.length) {
+        // still keep pointer attached to the (empty) wheel size
+        positionPointer(r * 0.035);
+        return;
+      }
 
       const arc = (2 * Math.PI) / vs.length;
       const rimWidth = r * 0.035;
-      // Wood must extend ALL the way to the rim (no gap, no dark band)
+      // Wood must extend ALL the way to the rim
       const woodRadius = r;
       const texturesAvailable = woodReady && woodPatterns.some(Boolean);
+
+      // Position pointer after we know the current wheel radius
+      // Convert rimWidth (css px) = same as our drawing coords (css space)
+      positionPointer(rimWidth);
 
       // --- outer rim (raised bevel) ---
       const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
@@ -521,7 +543,6 @@
           ctx.fillStyle = pat;
           ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
 
-          // Uniform tone: no per-slice edge shading
           ctx.restore();
         } else {
           ctx.fillStyle = '#8b5a2b';
@@ -887,6 +908,13 @@
 
         rotation = 0;
         assert(typeof pickIndexForRotation(10) === 'number', 'pickIndexForRotation returns a number');
+
+        // New tests: pointer positioning should not throw and should set a px value.
+        assert(!!pointerEl, 'pointer element exists');
+        // Ensure wheel has a size so pointer can be positioned.
+        const { r } = ensureSquareCanvasToWrapper();
+        positionPointer(r * 0.035);
+        assert(/px$/.test(pointerEl.style.top), 'pointer top is set in px');
 
         songs = [
           { id: 'a', title: 'A', artist: '', display: 'A' },
