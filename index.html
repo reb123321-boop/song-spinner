@@ -599,6 +599,24 @@
       ctx.stroke();
       ctx.restore();
 
+      // --- metal bezel (subtle brass ring to match pointer & pins) ---
+      const bezelOuter = r + rimWidth * 0.9;
+      const bezelInner = r + rimWidth * 0.25;
+      const bezelGrad = ctx.createRadialGradient(cx, cy, bezelInner, cx, cy, bezelOuter);
+      bezelGrad.addColorStop(0, 'rgba(255,255,255,0.65)');
+      bezelGrad.addColorStop(0.35, 'rgba(230,196,90,0.9)');
+      bezelGrad.addColorStop(0.6, 'rgba(176,137,47,0.95)');
+      bezelGrad.addColorStop(0.85, 'rgba(122,90,24,0.95)');
+      bezelGrad.addColorStop(1, 'rgba(255,255,255,0.35)');
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, (bezelInner + bezelOuter) / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = bezelGrad;
+      ctx.lineWidth = bezelOuter - bezelInner;
+      ctx.stroke();
+      ctx.restore();
+
       // --- segment separator pins (3D brass rivets) ---
       const pinRadius = r * 0.012;
       const pinDistance = r - rimWidth * 0.6;
