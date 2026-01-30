@@ -281,6 +281,15 @@
       pointer-events: none;
       z-index: 50;
     }
+
+    /* On narrow viewports, lift the build stamp above the control buttons */
+    @media (max-width: 520px) {
+      #buildStamp {
+        bottom: 74px; /* clears sticky button row */
+        font-size: 0.7rem;
+        opacity: 0.45;
+      }
+    }
   </style>
 </head>
 <body>
