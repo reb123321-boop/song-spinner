@@ -34,10 +34,19 @@
       flex: 1;
     }
 
-    h1 {
+    #titleBar {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
       margin: 0.25rem 0 0.5rem;
-      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      flex-wrap: wrap;
+      justify-content: center;
       text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
       font-weight: 900;
       letter-spacing: 0.04em;
       background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 55%, #9ca3af 100%);
@@ -48,6 +57,20 @@
         0 1px 0 rgba(255,255,255,0.25),
         0 2px 0 rgba(0,0,0,0.15),
         0 4px 8px rgba(0,0,0,0.45);
+    }
+
+    #buildStamp {
+      position: static;
+      font-size: 0.7rem;
+      opacity: 0.55;
+      letter-spacing: 0.03em;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 520px) {
+      #titleBar { gap: 0.4rem; }
+      #buildStamp { font-size: 0.65rem; opacity: 0.45; }
     }
 
     .pointer {
@@ -93,7 +116,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      /* IMPORTANT: remove drop-shadow here – it bleeds inward via canvas antialiasing */
       filter: none;
     }
 
@@ -122,7 +144,6 @@
       display: block;
       background: transparent;
       border-radius: 50%;
-      /* Remove inset shadows that were darkening slice ends */
       box-shadow: 0 28px 48px rgba(0,0,0,0.55);
     }
 
@@ -147,16 +168,15 @@
       line-height: 1.15;
       letter-spacing: 0.05em;
       color: #f9fafb;
-      border: 2px solid rgba(212,175,55,0.9); /* brass edge */
+      border: 2px solid rgba(212,175,55,0.9);
       text-shadow:
         0 1px 0 rgba(255,255,255,0.45),
         0 4px 10px rgba(0,0,0,0.65);
       box-shadow:
         0 2px 0 rgba(255,255,255,0.45) inset,
         0 -4px 8px rgba(0,0,0,0.6) inset,
-        0 0 0 rgba(212,175,55,0.0),
         0 26px 55px rgba(0,0,0,0.75);
-      transform: scale(0.7) translateY(18px) rotate(0deg);
+      transform: scale(0.7) translateY(18px);
       opacity: 0;
       animation: popIn 420ms cubic-bezier(.18,1.3,.4,1) forwards,
                  glowPulse 700ms ease-out 380ms;
@@ -169,24 +189,18 @@
     }
 
     @keyframes popIn {
-      0% {
-        transform: scale(0.75) translateY(14px);
-        opacity: 0;
-      }
-      60% {
-        transform: scale(1.08) translateY(-4px);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-      }
+      0% { transform: scale(0.75) translateY(14px); opacity: 0; }
+      60% { transform: scale(1.08) translateY(-4px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
     }
 
     #controls {
       width: 100%;
       padding: 0.5rem 0 0.75rem;
       display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      align-items: center;
       justify-content: center;
       position: sticky;
       bottom: 0;
@@ -218,6 +232,8 @@
       text-shadow:
         0 1px 0 rgba(0,0,0,0.45),
         0 -1px 0 rgba(255,255,255,0.35);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     button { background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%); }
@@ -228,15 +244,34 @@
     #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
     #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
+    /* Make the projector compensation buttons more subtle */
+    #wheelNarrowBtn, #wheelWideBtn, #wheelResetBtn {
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
+      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 0.45rem 1.1rem;
+      font-size: 1.05rem;
+      min-width: 56px;
+    }
+
+    #wheelResetBtn {
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
+      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 0.45rem 1.1rem;
+      font-size: 1.15rem;
+      min-width: 56px;
+    }
+
     button:active, .btn-link:active {
       transform: translateY(4px) scale(0.98);
       box-shadow:
         0 1px 0 rgba(255,255,255,0.25) inset,
         0 -1px 0 rgba(0,0,0,0.45) inset,
         0 4px 6px rgba(0,0,0,0.6);
-      text-shadow:
-        0 -1px 0 rgba(0,0,0,0.55),
-        0 1px 0 rgba(255,255,255,0.25);
     }
 
     #listOverlay {
@@ -270,41 +305,14 @@
     }
 
     #songChecklist input[type="checkbox"] { transform: scale(1.1); }
-
-    #titleBar {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin: 0.25rem 0 0.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    #buildStamp {
-      position: static;
-      font-size: 0.7rem;
-      opacity: 0.55;
-      letter-spacing: 0.03em;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-
-    /* On narrow viewports, lift the build stamp above the control buttons */
-    @media (max-width: 520px) {
-      #titleBar {
-        gap: 0.4rem;
-      }
-      #buildStamp {
-        font-size: 0.65rem;
-        opacity: 0.45;
-      }
-    }
-    }
   </style>
 </head>
 <body>
   <div id="app">
-    <div id="titleBar"><h1>🎶 Song Spinner</h1><span id="buildStamp"></span></div>
+    <div id="titleBar">
+      <h1>🎶 Song Spinner</h1>
+      <span id="buildStamp"></span>
+    </div>
 
     <div id="wheelWrap">
       <div class="pointer" aria-hidden="true"></div>
@@ -313,6 +321,11 @@
     </div>
 
     <div id="controls">
+      <div class="row" aria-label="Wheel aspect compensation">
+        <button id="wheelNarrowBtn" type="button" title="Narrow wheel">−</button>
+        <button id="wheelResetBtn" type="button" title="Reset wheel to circle">Reset</button>
+        <button id="wheelWideBtn" type="button" title="Widen wheel">+</button>
+      </div>
       <div class="row">
         <a class="btn-link" href="https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Edit List</a>
         <button id="toggleListBtn" type="button">Toggle Songs</button>
@@ -321,8 +334,6 @@
       </div>
     </div>
   </div>
-
-  
 
   <div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
     <div id="listPanel">
@@ -354,7 +365,6 @@
     // Real wood textures (Level 1 veneer look).
     // Put these images in your GitHub Pages repo under /textures/...
     const woodTextures = [
-      // rotation is in radians and controls grain direction per wood
       { name: 'oak', src: 'textures/oak.jpg', rotate: 0 },
       { name: 'walnut', src: 'textures/walnut.jpg', rotate: 0 },
       { name: 'maple', src: 'textures/maple.jpg', rotate: Math.PI / 2 },
@@ -369,6 +379,9 @@
     let spinning = false;
     let lastSpunId = null;
     let didInitRotation = false; // align first song at 12 o'clock once per page load
+
+    // Horizontal scale factor to compensate for projector aspect distortion
+    let wheelScaleX = 1.0; // 1.0 = perfect circle (CSS-scale applied to whole wheel)
 
     // --- spinner sound + pointer flex ---
     const clickAudio = new Audio('sounds/click.mp3');
@@ -467,9 +480,8 @@
       const wrapRect = wrap.getBoundingClientRect();
 
       // We want the TIP to sit just inside the rim (between the pins)
-      const tipInset = rimWidthPx * 0.55; // nudge inside rim stroke
+      const tipInset = rimWidthPx * 0.55;
       const top = (canvasRect.top - wrapRect.top) - POINTER_TRIANGLE_HEIGHT + tipInset;
-
       pointerEl.style.top = `${top}px`;
     }
 
@@ -505,200 +517,191 @@
       const cx = r;
       const cy = r;
 
-      // Ensure no interpolation darkening at edges
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, cssSize, cssSize);
+      ctx.save();
+      try {
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, cssSize, cssSize);
 
-      const vs = visibleSongs();
-      if (!vs.length) {
-        // still keep pointer attached to the (empty) wheel size
-        positionPointer(r * 0.035);
-        return;
-      }
+        const vs = visibleSongs();
+        const rimWidth = r * 0.035;
+        positionPointer(rimWidth);
 
-      const arc = (2 * Math.PI) / vs.length;
-      const rimWidth = r * 0.035;
-      // Wood must extend ALL the way to the rim
-      const woodRadius = r;
-      const texturesAvailable = woodReady && woodPatterns.some(Boolean);
+        if (!vs.length) return;
 
-      // Position pointer after we know the current wheel radius
-      // Convert rimWidth (css px) = same as our drawing coords (css space)
-      positionPointer(rimWidth);
+        const arc = (2 * Math.PI) / vs.length;
+        const woodRadius = r; // must reach rim
+        const texturesAvailable = woodReady && woodPatterns.some(Boolean);
 
-      // --- outer rim (raised bevel) ---
-      const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
-      rimGrad.addColorStop(0, 'rgba(255,255,255,0.0)');
-      rimGrad.addColorStop(0.6, 'rgba(255,255,255,0.35)');
-      rimGrad.addColorStop(0.85, 'rgba(255,255,255,0.65)');
-      rimGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
+        // --- outer rim (raised bevel) ---
+        const rimGrad = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
+        rimGrad.addColorStop(0, 'rgba(255,255,255,0.0)');
+        rimGrad.addColorStop(0.6, 'rgba(255,255,255,0.35)');
+        rimGrad.addColorStop(0.85, 'rgba(255,255,255,0.65)');
+        rimGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
 
-      // Slices + text
-      for (let i = 0; i < vs.length; i++) {
-        const s = vs[i];
-        const a = i * arc + rotation;
+        // Slices + text
+        for (let i = 0; i < vs.length; i++) {
+          const s = vs[i];
+          const a = i * arc + rotation;
 
-        // slice clip path
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, woodRadius, a, a + arc);
-        ctx.closePath();
+          // slice clip path
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, woodRadius, a, a + arc);
+          ctx.closePath();
 
-        const pat = texturesAvailable ? (woodPatterns[i % woodPatterns.length] || woodPatterns.find(Boolean)) : null;
-        const texCfg = woodTextures[i % woodTextures.length];
+          const pat = texturesAvailable ? (woodPatterns[i % woodPatterns.length] || woodPatterns.find(Boolean)) : null;
+          const texCfg = woodTextures[i % woodTextures.length];
 
-        if (pat) {
+          if (pat) {
+            ctx.save();
+            ctx.clip();
+
+            // Align grain direction per slice
+            ctx.translate(cx, cy);
+            ctx.rotate(a + (texCfg?.rotate || 0));
+
+            // IMPORTANT: draw texture at full scale so it reaches the rim exactly
+            ctx.scale(1, 1);
+
+            ctx.fillStyle = pat;
+            ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
+
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fill();
+          }
+
+          // ---- text (radially justified to rim) ----
           ctx.save();
-          ctx.clip();
-
-          // Align grain direction per slice
           ctx.translate(cx, cy);
-          ctx.rotate(a + (texCfg?.rotate || 0));
+          ctx.rotate(a + arc / 2);
 
-          // IMPORTANT: draw texture at full scale so it reaches the rim exactly
-          const veneerScale = 1;
-          ctx.scale(veneerScale, veneerScale);
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
 
-          ctx.fillStyle = pat;
-          ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
+          const fontSize = Math.max(12, r * 0.05);
+          ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
+
+          const rimPadding = rimWidth * 1.2;
+          const textRadius = woodRadius - rimPadding;
+
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillText(s.display, textRadius, 1.5);
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillText(s.display, textRadius, 0);
 
           ctx.restore();
-        } else {
-          ctx.fillStyle = '#8b5a2b';
+        }
+
+        // outer rim highlight – draw fully OUTSIDE the wood, never touching it
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + rimWidth * 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = rimGrad;
+        ctx.lineWidth = rimWidth;
+        ctx.stroke();
+        ctx.restore();
+
+        // --- metal bezel (subtle brass ring to match pointer & pins) ---
+        const bezelOuter = r + rimWidth * 0.9;
+        const bezelInner = r + rimWidth * 0.25;
+        const bezelGrad = ctx.createRadialGradient(cx, cy, bezelInner, cx, cy, bezelOuter);
+        bezelGrad.addColorStop(0, 'rgba(255,255,255,0.65)');
+        bezelGrad.addColorStop(0.35, 'rgba(230,196,90,0.9)');
+        bezelGrad.addColorStop(0.6, 'rgba(176,137,47,0.95)');
+        bezelGrad.addColorStop(0.85, 'rgba(122,90,24,0.95)');
+        bezelGrad.addColorStop(1, 'rgba(255,255,255,0.35)');
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, (bezelInner + bezelOuter) / 2, 0, Math.PI * 2);
+        ctx.strokeStyle = bezelGrad;
+        ctx.lineWidth = bezelOuter - bezelInner;
+        ctx.stroke();
+        ctx.restore();
+
+        // --- segment separator pins (3D brass rivets) ---
+        const pinRadius = r * 0.012;
+        const pinDistance = r - rimWidth * 0.6;
+
+        for (let i = 0; i < vs.length; i++) {
+          const ang = i * arc + rotation;
+          const px = cx + Math.cos(ang) * pinDistance;
+          const py = cy + Math.sin(ang) * pinDistance;
+
+          const pinGrad = ctx.createRadialGradient(
+            px - pinRadius * 0.4,
+            py - pinRadius * 0.4,
+            pinRadius * 0.2,
+            px,
+            py,
+            pinRadius
+          );
+          pinGrad.addColorStop(0, '#f5e6a6');
+          pinGrad.addColorStop(0.4, '#e0c36a');
+          pinGrad.addColorStop(0.75, '#b0892f');
+          pinGrad.addColorStop(1, '#6b4f18');
+
+          ctx.beginPath();
+          ctx.arc(px, py, pinRadius, 0, Math.PI * 2);
+          ctx.fillStyle = pinGrad;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(px - pinRadius * 0.25, py - pinRadius * 0.25, pinRadius * 0.25, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
           ctx.fill();
         }
 
-        // ---- text (radially justified to rim) ----
+        // centre hub – brass dome with mahogany collar (spins with wheel)
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(a + arc / 2);
+        ctx.rotate(rotation);
+        ctx.translate(-cx, -cy);
 
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
+        const mahoganyIdx = woodTextures.findIndex(w => w.name === 'mahogany');
+        const mahoganyPat = (mahoganyIdx >= 0 ? woodPatterns[mahoganyIdx] : null) || woodPatterns.find(Boolean);
 
-        const fontSize = Math.max(12, r * 0.05);
-        ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
+        // mahogany collar
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.075, 0, Math.PI * 2);
+        ctx.fillStyle = mahoganyPat || '#4a2a1a';
+        ctx.fill();
 
-        const rimPadding = rimWidth * 1.2;
-        const textRadius = woodRadius - rimPadding;
+        // subtle inner shadow
+        ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+        ctx.lineWidth = r * 0.004;
+        ctx.stroke();
 
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillText(s.display, textRadius, 1.5);
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(s.display, textRadius, 0);
+        // brass pin
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.042, 0, Math.PI * 2);
+        const hubGrad = ctx.createRadialGradient(
+          cx - r * 0.01,
+          cy - r * 0.01,
+          r * 0.006,
+          cx,
+          cy,
+          r * 0.05
+        );
+        hubGrad.addColorStop(0, '#ead9a0');
+        hubGrad.addColorStop(0.4, '#d2b55f');
+        hubGrad.addColorStop(0.75, '#a97f2a');
+        hubGrad.addColorStop(1, '#6b4f18');
+        ctx.fillStyle = hubGrad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.012, cy - r * 0.012, r * 0.008, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fill();
 
         ctx.restore();
+      } finally {
+        ctx.restore();
       }
-
-      // outer rim highlight – draw fully OUTSIDE the wood, never touching it
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r + rimWidth * 0.5, 0, Math.PI * 2);
-      ctx.strokeStyle = rimGrad;
-      ctx.lineWidth = rimWidth;
-      ctx.stroke();
-      ctx.restore();
-
-      // --- metal bezel (subtle brass ring to match pointer & pins) ---
-      const bezelOuter = r + rimWidth * 0.9;
-      const bezelInner = r + rimWidth * 0.25;
-      const bezelGrad = ctx.createRadialGradient(cx, cy, bezelInner, cx, cy, bezelOuter);
-      bezelGrad.addColorStop(0, 'rgba(255,255,255,0.65)');
-      bezelGrad.addColorStop(0.35, 'rgba(230,196,90,0.9)');
-      bezelGrad.addColorStop(0.6, 'rgba(176,137,47,0.95)');
-      bezelGrad.addColorStop(0.85, 'rgba(122,90,24,0.95)');
-      bezelGrad.addColorStop(1, 'rgba(255,255,255,0.35)');
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, (bezelInner + bezelOuter) / 2, 0, Math.PI * 2);
-      ctx.strokeStyle = bezelGrad;
-      ctx.lineWidth = bezelOuter - bezelInner;
-      ctx.stroke();
-      ctx.restore();
-
-      // --- segment separator pins (3D brass rivets) ---
-      const pinRadius = r * 0.012;
-      const pinDistance = r - rimWidth * 0.6;
-
-      for (let i = 0; i < vs.length; i++) {
-        const ang = i * arc + rotation;
-        const px = cx + Math.cos(ang) * pinDistance;
-        const py = cy + Math.sin(ang) * pinDistance;
-
-        const pinGrad = ctx.createRadialGradient(
-          px - pinRadius * 0.4,
-          py - pinRadius * 0.4,
-          pinRadius * 0.2,
-          px,
-          py,
-          pinRadius
-        );
-        pinGrad.addColorStop(0, '#f5e6a6');
-        pinGrad.addColorStop(0.4, '#e0c36a');
-        pinGrad.addColorStop(0.75, '#b0892f');
-        pinGrad.addColorStop(1, '#6b4f18');
-
-        ctx.beginPath();
-        ctx.arc(px, py, pinRadius, 0, Math.PI * 2);
-        ctx.fillStyle = pinGrad;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(px - pinRadius * 0.25, py - pinRadius * 0.25, pinRadius * 0.25, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.fill();
-      }
-
-      // centre hub – brass dome with mahogany collar (spins with wheel)
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rotation);
-      ctx.translate(-cx, -cy);
-
-      const mahoganyIdx = woodTextures.findIndex(w => w.name === 'mahogany');
-      const mahoganyPat = (mahoganyIdx >= 0 ? woodPatterns[mahoganyIdx] : null) || woodPatterns.find(Boolean);
-
-      // mahogany collar
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.075, 0, Math.PI * 2);
-      if (mahoganyPat) {
-        ctx.fillStyle = mahoganyPat;
-        ctx.fill();
-      } else {
-        ctx.fillStyle = '#4a2a1a';
-        ctx.fill();
-      }
-
-      // subtle inner shadow (no grey ring)
-      ctx.strokeStyle = 'rgba(0,0,0,0.30)';
-      ctx.lineWidth = r * 0.004;
-      ctx.stroke();
-
-      // brass pin (smaller, less shiny)
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.042, 0, Math.PI * 2);
-      const hubGrad = ctx.createRadialGradient(
-        cx - r * 0.01,
-        cy - r * 0.01,
-        r * 0.006,
-        cx,
-        cy,
-        r * 0.05
-      );
-      hubGrad.addColorStop(0, '#ead9a0');
-      hubGrad.addColorStop(0.4, '#d2b55f');
-      hubGrad.addColorStop(0.75, '#a97f2a');
-      hubGrad.addColorStop(1, '#6b4f18');
-      ctx.fillStyle = hubGrad;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(cx - r * 0.012, cy - r * 0.012, r * 0.008, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fill();
-
-      ctx.restore();
     }
 
     function pickIndexForRotation(len) {
@@ -708,7 +711,6 @@
 
     function pointerFlex(omegaRadPerSec) {
       if (!pointerEl) return;
-      // Convert speed into a small flex angle (degrees)
       const kickDeg = Math.max(3, Math.min(10, omegaRadPerSec * 0.6));
       pointerEl.style.transform = `translateX(-50%) rotate(${kickDeg}deg)`;
       setTimeout(() => {
@@ -731,24 +733,18 @@
       spinning = true;
       overlay.style.display = 'none';
 
-      // --- natural spin parameters tuned to ~2.5 seconds total ---
       const start = performance.now();
-
-      // Initial angular velocity (rad/sec)
       let omega = (5 + Math.random() * 1.5) * Math.PI;
-
-      // Friction for faster decay, still with tiny per-spin variation
       const baseFriction = 0.965;
       const friction = baseFriction + (Math.random() - 0.5) * 0.002;
-
       let lastTime = start;
 
       (function anim(t) {
-        const dt = Math.min((t - lastTime) / 1000, 0.05); // seconds
+        const dt = Math.min((t - lastTime) / 1000, 0.05);
         lastTime = t;
 
         rotation += omega * dt;
-        omega *= Math.pow(friction, dt * 60); // frame-rate independent decay
+        omega *= Math.pow(friction, dt * 60);
 
         const idxNow = pickIndexForRotation(vsNow.length);
         if (idxNow !== lastClickIndex) {
@@ -759,7 +755,6 @@
 
         drawWheel();
 
-        // when very slow, bias cleanly to nearest pin (no extra clack)
         if (omega > 0.15) {
           requestAnimationFrame(anim);
         } else {
@@ -768,7 +763,6 @@
           rotation = -Math.PI / 2 - arc * snappedIndex - arc / 2;
 
           drawWheel();
-
           spinning = false;
 
           const vs = visibleSongs();
@@ -786,7 +780,6 @@
             winAudio.play();
           } catch (e) {}
 
-          // tiny celebratory tilt
           const card = document.getElementById('overlayCard');
           if (card) {
             const tilt = (Math.random() - 0.5) * 6;
@@ -819,13 +812,26 @@
       const vs = visibleSongs();
       if (!vs.length) return;
       const arc = (2 * Math.PI) / vs.length;
-
-      // Place the centre of the first visible slice at 12 o'clock (top).
       rotation = -Math.PI / 2 - arc / 2;
       didInitRotation = true;
     }
 
     // UI
+    document.getElementById('wheelNarrowBtn').onclick = () => {
+      wheelScaleX = Math.max(0.85, +(wheelScaleX - 0.02).toFixed(3));
+      canvas.style.transform = `scaleX(${wheelScaleX})`;
+    };
+
+    document.getElementById('wheelWideBtn').onclick = () => {
+      wheelScaleX = Math.min(1.15, +(wheelScaleX + 0.02).toFixed(3));
+      canvas.style.transform = `scaleX(${wheelScaleX})`;
+    };
+
+    document.getElementById('wheelResetBtn').onclick = () => {
+      wheelScaleX = 1.0;
+      canvas.style.transform = 'scaleX(1)';
+    };
+
     document.getElementById('spinBtn').onclick = spin;
     document.getElementById('toggleListBtn').onclick = () => { listOverlay.style.display = 'flex'; };
     document.getElementById('closeListBtn').onclick = () => { listOverlay.style.display = 'none'; };
@@ -876,7 +882,6 @@
         temp.push({ id, ...meta, include: includeToChecked(incRaw) });
       }
 
-      // Determine which titles are ambiguous
       const titleCounts = {};
       temp.forEach(s => { titleCounts[s.title] = (titleCounts[s.title] || 0) + 1; });
 
@@ -887,7 +892,6 @@
         const ambiguous = titleCounts[s.title] > 1;
         const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
         songs.push({ id: s.id, title: s.title, artist: s.artist, display });
-        // Include column: add to list but unchecked when FALSE
         songVisibility[s.id] = s.include;
       });
 
@@ -904,13 +908,13 @@
         rotation,
         didInitRotation,
         lastSpunId,
-        woodReady
+        woodReady,
+        wheelScaleX
       };
 
       const assert = (cond, msg) => { if (!cond) throw new Error(`Test failed: ${msg}`); };
 
       try {
-        // Build stamp should be populated with a human-friendly string.
         const el = document.getElementById('buildStamp');
         assert(!!el, 'buildStamp element exists');
         assert(typeof el.textContent === 'string' && el.textContent.trim().length > 0, 'buildStamp text is not empty');
@@ -946,12 +950,20 @@
         rotation = 0;
         assert(typeof pickIndexForRotation(10) === 'number', 'pickIndexForRotation returns a number');
 
-        // New tests: pointer positioning should not throw and should set a px value.
         assert(!!pointerEl, 'pointer element exists');
-        // Ensure wheel has a size so pointer can be positioned.
         const { r } = ensureSquareCanvasToWrapper();
         positionPointer(r * 0.035);
         assert(/px$/.test(pointerEl.style.top), 'pointer top is set in px');
+
+        // New tests: wheel aspect buttons exist and scale bounds are enforced.
+        assert(!!document.getElementById('wheelNarrowBtn'), 'wheelNarrowBtn exists');
+        assert(!!document.getElementById('wheelWideBtn'), 'wheelWideBtn exists');
+
+        wheelScaleX = 1;
+        for (let i = 0; i < 50; i++) wheelScaleX = Math.max(0.85, +(wheelScaleX - 0.02).toFixed(3));
+        assert(wheelScaleX >= 0.85, 'wheelScaleX lower bound');
+        for (let i = 0; i < 50; i++) wheelScaleX = Math.min(1.15, +(wheelScaleX + 0.02).toFixed(3));
+        assert(wheelScaleX <= 1.15, 'wheelScaleX upper bound');
 
         songs = [
           { id: 'a', title: 'A', artist: '', display: 'A' },
@@ -970,6 +982,7 @@
         didInitRotation = saved.didInitRotation;
         lastSpunId = saved.lastSpunId;
         woodReady = saved.woodReady;
+        wheelScaleX = saved.wheelScaleX;
       }
     }
 
