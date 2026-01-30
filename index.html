@@ -119,6 +119,11 @@
       filter: none;
     }
 
+    /* Extra top breathing room on wide screens so the pointer never collides with the title */
+    @media (min-width: 700px) {
+      #wheelWrap { margin-top: 3.5rem; }
+    }
+
     /* soft ambient shadow below wheel to enhance floating illusion */
     #wheelWrap::before {
       content: '';
