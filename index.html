@@ -271,30 +271,40 @@
 
     #songChecklist input[type="checkbox"] { transform: scale(1.1); }
 
+    #titleBar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 0.25rem 0 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
     #buildStamp {
-      position: fixed;
-      left: 10px;
-      bottom: 8px;
-      font-size: 0.75rem;
+      position: static;
+      font-size: 0.7rem;
       opacity: 0.55;
       letter-spacing: 0.03em;
       pointer-events: none;
-      z-index: 50;
+      white-space: nowrap;
     }
 
     /* On narrow viewports, lift the build stamp above the control buttons */
     @media (max-width: 520px) {
+      #titleBar {
+        gap: 0.4rem;
+      }
       #buildStamp {
-        bottom: 74px; /* clears sticky button row */
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         opacity: 0.45;
       }
+    }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <h1>🎶 Song Spinner</h1>
+    <div id="titleBar"><h1>🎶 Song Spinner</h1><span id="buildStamp"></span></div>
 
     <div id="wheelWrap">
       <div class="pointer" aria-hidden="true"></div>
@@ -312,7 +322,7 @@
     </div>
   </div>
 
-  <div id="buildStamp"></div>
+  
 
   <div id="listOverlay" role="dialog" aria-modal="true" aria-label="Song visibility">
     <div id="listPanel">
