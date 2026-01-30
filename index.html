@@ -119,12 +119,10 @@
       filter: none;
     }
 
-    /* Extra top breathing room on wide screens so the pointer never collides with the title */
     @media (min-width: 700px) {
       #wheelWrap { margin-top: 3.5rem; }
     }
 
-    /* soft ambient shadow below wheel to enhance floating illusion */
     #wheelWrap::before {
       content: '';
       position: absolute;
@@ -253,7 +251,6 @@
     #spotifyBtn:hover { filter: brightness(1.15) saturate(1.1); }
     #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
-    /* Make the projector compensation buttons more subtle */
     #wheelNarrowBtn, #wheelWideBtn, #wheelResetBtn {
       font-size: 0.95rem;
       opacity: 0.9;
@@ -283,14 +280,23 @@
       padding: 1rem;
     }
 
+    /* Panel is a column layout: checklist scrolls, buttons sit below */
     #listPanel {
       background: #020617;
       padding: 1rem;
       border-radius: 14px;
       width: min(720px, 100%);
       max-height: 85vh;
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
       box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+
+    #songChecklist {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: .75rem;
+      padding-right: .25rem;
     }
 
     #songChecklist label {
@@ -300,6 +306,7 @@
       padding: .35rem .25rem;
       border-bottom: 1px solid rgba(255,255,255,.08);
       user-select: none;
+      line-height: 1.25;
     }
 
     #songChecklist input[type="checkbox"] { transform: scale(1.1); }
@@ -339,7 +346,7 @@
     <div id="listPanel">
       <h2 style="margin:0 0 .6rem;">Song Visibility</h2>
       <div id="songChecklist"></div>
-      <div style="display:flex; gap:.5rem; justify-content:flex-end; margin-top:.75rem; position: sticky; bottom: 0; background: #020617; padding-top: .5rem;">
+      <div id="listButtons" style="display:flex; gap:.5rem; justify-content:flex-end; background:#020617; padding-top:.5rem;">
         <button id="selectAllBtn" type="button">Select All</button>
         <button id="selectNoneBtn" type="button">Select None</button>
         <button id="closeListBtn" type="button">Close</button>
@@ -373,7 +380,7 @@
     ];
 
     // Wheel state
-    let songs = []; // [{ id, title, artist, display }]
+    let songs = []; // [{ id, title, artist, display, key?, lyricsUrl? }]
     let songVisibility = {}; // { [id]: boolean }
     let rotation = 0;
     let spinning = false;
@@ -539,12 +546,10 @@
         rimGrad.addColorStop(0.85, 'rgba(255,255,255,0.65)');
         rimGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
 
-        // Slices + text
         for (let i = 0; i < vs.length; i++) {
           const s = vs[i];
           const a = i * arc + rotation;
 
-          // slice clip path
           ctx.beginPath();
           ctx.moveTo(cx, cy);
           ctx.arc(cx, cy, woodRadius, a, a + arc);
@@ -557,11 +562,8 @@
             ctx.save();
             ctx.clip();
 
-            // Align grain direction per slice
             ctx.translate(cx, cy);
             ctx.rotate(a + (texCfg?.rotate || 0));
-
-            // IMPORTANT: draw texture at full scale so it reaches the rim exactly
             ctx.scale(1, 1);
 
             ctx.fillStyle = pat;
@@ -573,7 +575,6 @@
             ctx.fill();
           }
 
-          // ---- text (radially justified to rim) ----
           ctx.save();
           ctx.translate(cx, cy);
           ctx.rotate(a + arc / 2);
@@ -595,7 +596,6 @@
           ctx.restore();
         }
 
-        // outer rim highlight – draw fully OUTSIDE the wood, never touching it
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r + rimWidth * 0.5, 0, Math.PI * 2);
@@ -604,7 +604,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // --- metal bezel (subtle brass ring to match pointer & pins) ---
         const bezelOuter = r + rimWidth * 0.9;
         const bezelInner = r + rimWidth * 0.25;
         const bezelGrad = ctx.createRadialGradient(cx, cy, bezelInner, cx, cy, bezelOuter);
@@ -622,7 +621,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // --- segment separator pins (3D brass rivets) ---
         const pinRadius = r * 0.012;
         const pinDistance = r - rimWidth * 0.6;
 
@@ -655,7 +653,6 @@
           ctx.fill();
         }
 
-        // centre hub – brass dome with mahogany collar (spins with wheel)
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(rotation);
@@ -664,18 +661,15 @@
         const mahoganyIdx = woodTextures.findIndex(w => w.name === 'mahogany');
         const mahoganyPat = (mahoganyIdx >= 0 ? woodPatterns[mahoganyIdx] : null) || woodPatterns.find(Boolean);
 
-        // mahogany collar
         ctx.beginPath();
         ctx.arc(cx, cy, r * 0.075, 0, Math.PI * 2);
         ctx.fillStyle = mahoganyPat || '#4a2a1a';
         ctx.fill();
 
-        // subtle inner shadow
         ctx.strokeStyle = 'rgba(0,0,0,0.30)';
         ctx.lineWidth = r * 0.004;
         ctx.stroke();
 
-        // brass pin
         ctx.beginPath();
         ctx.arc(cx, cy, r * 0.042, 0, Math.PI * 2);
         const hubGrad = ctx.createRadialGradient(
@@ -705,7 +699,6 @@
     }
 
     function pickIndexForRotation(len) {
-      // pointer is at top; adjust by +90deg (canvas 0 rad is 3 o'clock)
       return Math.floor(((2 * Math.PI - (rotation + Math.PI / 2)) % (2 * Math.PI)) / ((2 * Math.PI) / len));
     }
 
@@ -802,7 +795,14 @@
           drawWheel();
         };
         l.appendChild(cb);
-        l.appendChild(document.createTextNode(s.display));
+
+        // Full detail for toggle list: title + key (if present) + artist
+        const parts = [];
+        if (s.title) parts.push(s.title);
+        if (s.key) parts.push(`(${s.key})`);
+        if (s.artist) parts.push(`– ${s.artist}`);
+
+        l.appendChild(document.createTextNode(parts.join(' ')));
         songChecklist.appendChild(l);
       });
     }
@@ -886,8 +886,9 @@
 
       const headers = rows[0].map(h => h.trim());
       const songIdx = headers.findIndex(h => /song/i.test(h));
-      const linkIdx = headers.findIndex(h => /link|lyrics/i.test(h));
+      const keyIdx = headers.findIndex(h => /key/i.test(h));
       const incIdx = headers.findIndex(h => /include/i.test(h));
+      const linkIdx = headers.findIndex(h => /lyrics\s*url/i.test(h));
       if (songIdx < 0) throw new Error('Could not find a Song column in the sheet');
 
       const temp = [];
@@ -898,7 +899,8 @@
         const id = `${meta.title}__${meta.artist}__${i}`;
         const incRaw = incIdx >= 0 ? cols[incIdx] : 'TRUE';
         const lyricsUrl = linkIdx >= 0 ? cols[linkIdx] : '';
-        temp.push({ id, ...meta, lyricsUrl, include: includeToChecked(incRaw) });
+        const key = keyIdx >= 0 ? cols[keyIdx] : '';
+        temp.push({ id, ...meta, key, lyricsUrl, include: includeToChecked(incRaw) });
       }
 
       const titleCounts = {};
@@ -910,7 +912,7 @@
       temp.forEach(s => {
         const ambiguous = titleCounts[s.title] > 1;
         const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
-        songs.push({ id: s.id, title: s.title, artist: s.artist, display, lyricsUrl: s.lyricsUrl });
+        songs.push({ id: s.id, title: s.title, artist: s.artist, display, lyricsUrl: s.lyricsUrl, key: s.key });
         songVisibility[s.id] = s.include;
       });
 
@@ -974,9 +976,9 @@
         positionPointer(r * 0.035);
         assert(/px$/.test(pointerEl.style.top), 'pointer top is set in px');
 
-        // New tests: wheel aspect buttons exist and scale bounds are enforced.
         assert(!!document.getElementById('wheelNarrowBtn'), 'wheelNarrowBtn exists');
         assert(!!document.getElementById('wheelWideBtn'), 'wheelWideBtn exists');
+        assert(!!document.getElementById('lyricsBtn'), 'lyricsBtn exists');
 
         wheelScaleX = 1;
         for (let i = 0; i < 50; i++) wheelScaleX = Math.max(0.85, +(wheelScaleX - 0.02).toFixed(3));
@@ -984,11 +986,18 @@
         for (let i = 0; i < 50; i++) wheelScaleX = Math.min(1.15, +(wheelScaleX + 0.02).toFixed(3));
         assert(wheelScaleX <= 1.15, 'wheelScaleX upper bound');
 
+        // New tests: toggle list renders full detail text.
         songs = [
-          { id: 'a', title: 'A', artist: '', display: 'A' },
-          { id: 'b', title: 'B', artist: '', display: 'B' }
+          { id: 't1', title: 'Song A', key: 'G', artist: 'Artist A', display: 'Song A', lyricsUrl: 'https://example.com' },
+          { id: 't2', title: 'Song B', key: '', artist: 'Artist B', display: 'Song B', lyricsUrl: '' }
         ];
-        songVisibility = { a: true, b: true };
+        songVisibility = { t1: true, t2: true };
+        rebuildChecklist();
+        const labels = songChecklist.querySelectorAll('label');
+        assert(labels.length === 2, 'rebuildChecklist created 2 labels');
+        assert(labels[0].textContent.includes('Song A') && labels[0].textContent.includes('(G)') && labels[0].textContent.includes('Artist A'), 'toggle list shows title + key + artist');
+        assert(labels[1].textContent.includes('Song B') && !labels[1].textContent.includes('(G)'), 'toggle list omits key if blank');
+
         didInitRotation = false;
         initRotationOnce();
         assert(didInitRotation === true, 'initRotationOnce sets flag');
