@@ -247,6 +247,8 @@
 
     #toggleListBtn { background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%); }
     #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
+    #spotifyBtn { background: linear-gradient(180deg, #86efac 0%, #22c55e 55%, #15803d 100%); }
+    #spotifyBtn:hover { filter: brightness(1.15) saturate(1.1); }
     #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
     /* Make the projector compensation buttons more subtle */
@@ -324,6 +326,7 @@
         <a class="btn-link" href="https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Edit List</a>
         <button id="toggleListBtn" type="button">Toggle Songs</button>
         <button id="spinBtn" type="button">SPIN</button>
+        <button id="spotifyBtn" type="button">Open in Spotify</button>
         <button id="deselectLastBtn" type="button">Remove Last Song</button>
       </div>
     </div>
@@ -850,6 +853,16 @@
       overlay.style.display = 'none';
       rebuildChecklist();
       drawWheel();
+    };
+
+    document.getElementById('spotifyBtn').onclick = () => {
+      if (!lastSpunId) return;
+      const s = songs.find(x => x.id === lastSpunId);
+      if (!s) return;
+
+      const query = encodeURIComponent([s.title, s.artist].filter(Boolean).join(' '));
+      const url = `https://open.spotify.com/search/${query}`;
+      window.open(url, '_blank', 'noopener');
     };
 
     async function loadSongs() {
