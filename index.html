@@ -119,10 +119,12 @@
       filter: none;
     }
 
+    /* Extra top breathing room on wide screens so the pointer never collides with the title */
     @media (min-width: 700px) {
       #wheelWrap { margin-top: 3.5rem; }
     }
 
+    /* soft ambient shadow below wheel to enhance floating illusion */
     #wheelWrap::before {
       content: '';
       position: absolute;
@@ -246,9 +248,12 @@
     #toggleListBtn { background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%); }
     #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
     #spotifyBtn { background: linear-gradient(180deg, #86efac 0%, #22c55e 55%, #15803d 100%); }
+    #lyricsBtn { background: linear-gradient(180deg, #8ab4f8 0%, #4285f4 55%, #1a73e8 100%); }
+    #editMasterListBtn { background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%); }
     #spotifyBtn:hover { filter: brightness(1.15) saturate(1.1); }
     #deselectLastBtn:hover { filter: brightness(1.15) saturate(1.1); }
 
+    /* Make the projector compensation buttons more subtle */
     #wheelNarrowBtn, #wheelWideBtn, #wheelResetBtn {
       font-size: 0.95rem;
       opacity: 0.9;
@@ -284,16 +289,8 @@
       border-radius: 14px;
       width: min(720px, 100%);
       max-height: 85vh;
-      display: flex;
-      flex-direction: column;
+      overflow: auto;
       box-shadow: 0 20px 50px rgba(0,0,0,0.45);
-    }
-
-    #songChecklist {
-      flex: 1 1 auto;
-      overflow-y: auto;
-      padding-right: .25rem;
-      margin-bottom: .5rem;
     }
 
     #songChecklist label {
@@ -328,9 +325,10 @@
         <button id="wheelWideBtn" type="button" title="Widen wheel">+</button>
       </div>
       <div class="row">
-        <a class="btn-link" href="https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Edit List</a>
+        <a class="btn-link" id="editMasterListBtn" href="https://docs.google.com/spreadsheets/d/16piXDxJk6q6Il0mPR4phsyfXML6CkWyJyS7LGEM_Zaw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Edit Master List</a>
         <button id="toggleListBtn" type="button">Toggle Songs</button>
         <button id="spinBtn" type="button">SPIN</button>
+        <button id="lyricsBtn" type="button">Open Lyrics</button>
         <button id="spotifyBtn" type="button">Open in Spotify</button>
         <button id="deselectLastBtn" type="button">Remove Last Song</button>
       </div>
@@ -341,7 +339,7 @@
     <div id="listPanel">
       <h2 style="margin:0 0 .6rem;">Song Visibility</h2>
       <div id="songChecklist"></div>
-      <div style="display:flex; gap:.5rem; justify-content:flex-end; margin-top:.5rem; position: sticky; bottom: 0; background: #020617; padding-top: .5rem;">
+      <div style="display:flex; gap:.5rem; justify-content:flex-end; margin-top:.75rem; position: sticky; bottom: 0; background: #020617; padding-top: .5rem;">
         <button id="selectAllBtn" type="button">Select All</button>
         <button id="selectNoneBtn" type="button">Select None</button>
         <button id="closeListBtn" type="button">Close</button>
@@ -375,10 +373,7 @@
     ];
 
     // Wheel state
-    // songs items include:
-    // - display: label used on segments (Title only unless duplicate title then Title – Artist)
-    // - fullLabel: label used in the Toggle list (Title – Artist where available)
-    let songs = []; // [{ id, title, artist, display, fullLabel }]
+    let songs = []; // [{ id, title, artist, display }]
     let songVisibility = {}; // { [id]: boolean }
     let rotation = 0;
     let spinning = false;
@@ -565,6 +560,8 @@
             // Align grain direction per slice
             ctx.translate(cx, cy);
             ctx.rotate(a + (texCfg?.rotate || 0));
+
+            // IMPORTANT: draw texture at full scale so it reaches the rim exactly
             ctx.scale(1, 1);
 
             ctx.fillStyle = pat;
@@ -673,6 +670,7 @@
         ctx.fillStyle = mahoganyPat || '#4a2a1a';
         ctx.fill();
 
+        // subtle inner shadow
         ctx.strokeStyle = 'rgba(0,0,0,0.30)';
         ctx.lineWidth = r * 0.004;
         ctx.stroke();
@@ -791,8 +789,6 @@
       })(start);
     }
 
-    // Toggle list should show FULL labels (Title – Artist where available)
-    // while segments keep s.display (Title only unless ambiguous)
     function rebuildChecklist() {
       songChecklist.innerHTML = '';
       songs.forEach(s => {
@@ -806,7 +802,7 @@
           drawWheel();
         };
         l.appendChild(cb);
-        l.appendChild(document.createTextNode(s.fullLabel || s.display));
+        l.appendChild(document.createTextNode(s.display));
         songChecklist.appendChild(l);
       });
     }
@@ -862,6 +858,13 @@
       drawWheel();
     };
 
+    document.getElementById('lyricsBtn').onclick = () => {
+      if (!lastSpunId) return;
+      const s = songs.find(x => x.id === lastSpunId);
+      if (!s || !s.lyricsUrl) return;
+      window.open(s.lyricsUrl, '_blank', 'noopener');
+    };
+
     document.getElementById('spotifyBtn').onclick = () => {
       if (!lastSpunId) return;
       const s = songs.find(x => x.id === lastSpunId);
@@ -883,6 +886,7 @@
 
       const headers = rows[0].map(h => h.trim());
       const songIdx = headers.findIndex(h => /song/i.test(h));
+      const linkIdx = headers.findIndex(h => /link|lyrics/i.test(h));
       const incIdx = headers.findIndex(h => /include/i.test(h));
       if (songIdx < 0) throw new Error('Could not find a Song column in the sheet');
 
@@ -893,26 +897,20 @@
         if (!meta) continue;
         const id = `${meta.title}__${meta.artist}__${i}`;
         const incRaw = incIdx >= 0 ? cols[incIdx] : 'TRUE';
-        temp.push({ id, ...meta, include: includeToChecked(incRaw) });
+        const lyricsUrl = linkIdx >= 0 ? cols[linkIdx] : '';
+        temp.push({ id, ...meta, lyricsUrl, include: includeToChecked(incRaw) });
       }
 
-      // Build title counts to decide when to disambiguate on the wheel
       const titleCounts = {};
-      temp.forEach(s => {
-        titleCounts[s.title] = (titleCounts[s.title] || 0) + 1;
-      });
+      temp.forEach(s => { titleCounts[s.title] = (titleCounts[s.title] || 0) + 1; });
 
-      // Reset canonical state before rebuilding
       songs = [];
       songVisibility = {};
 
-      // Preserve original sheet order (so the wheel "feels" consistent),
-      // while using titleCounts to decide display labels.
       temp.forEach(s => {
-        const ambiguous = (titleCounts[s.title] || 0) > 1;
-        const display = (ambiguous && s.artist) ? `${s.title} – ${s.artist}` : s.title;
-        const fullLabel = s.artist ? `${s.title} – ${s.artist}` : s.title;
-        songs.push({ id: s.id, title: s.title, artist: s.artist, display, fullLabel });
+        const ambiguous = titleCounts[s.title] > 1;
+        const display = ambiguous && s.artist ? `${s.title} – ${s.artist}` : s.title;
+        songs.push({ id: s.id, title: s.title, artist: s.artist, display, lyricsUrl: s.lyricsUrl });
         songVisibility[s.id] = s.include;
       });
 
@@ -949,7 +947,6 @@
         const p2 = parseSongCell('Fix You - in E♭ - Coldplay');
         assert(p2 && p2.title === 'Fix You' && p2.artist === 'in E♭ - Coldplay', 'parseSongCell preserves extra dash parts in artist');
 
-        // Label rules
         const mock = [
           { id: '1', title: 'Yesterday', artist: '', include: true },
           { id: '2', title: 'Fix You', artist: 'Coldplay', include: true },
@@ -957,13 +954,9 @@
         ];
         const counts = {};
         mock.forEach(s => counts[s.title] = (counts[s.title] || 0) + 1);
-        const segmentLabelFor = (title, artist) => ((counts[title] > 1 && artist) ? `${title} – ${artist}` : title);
-        const listLabelFor = (title, artist) => (artist ? `${title} – ${artist}` : title);
-
-        assert(segmentLabelFor('Yesterday', '') === 'Yesterday', 'Unambiguous title omits artist on segment');
-        assert(segmentLabelFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'Ambiguous title includes artist on segment');
-        assert(listLabelFor('Yesterday', '') === 'Yesterday', 'List label: no artist => title only');
-        assert(listLabelFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'List label: artist => Title – Artist');
+        const displayFor = (title, artist) => (counts[title] > 1 && artist ? `${title} – ${artist}` : title);
+        assert(displayFor('Yesterday', '') === 'Yesterday', 'Unambiguous title omits artist');
+        assert(displayFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'Ambiguous title includes artist');
 
         assert(includeToChecked('TRUE') === true, 'Include TRUE => checked');
         assert(includeToChecked('FALSE') === false, 'Include FALSE => unchecked');
@@ -981,7 +974,7 @@
         positionPointer(r * 0.035);
         assert(/px$/.test(pointerEl.style.top), 'pointer top is set in px');
 
-        // Aspect buttons exist and scale bounds are enforced.
+        // New tests: wheel aspect buttons exist and scale bounds are enforced.
         assert(!!document.getElementById('wheelNarrowBtn'), 'wheelNarrowBtn exists');
         assert(!!document.getElementById('wheelWideBtn'), 'wheelWideBtn exists');
 
@@ -991,18 +984,9 @@
         for (let i = 0; i < 50; i++) wheelScaleX = Math.min(1.15, +(wheelScaleX + 0.02).toFixed(3));
         assert(wheelScaleX <= 1.15, 'wheelScaleX upper bound');
 
-        // New test: rebuildChecklist uses fullLabel when present
         songs = [
-          { id: 'x', title: 'A', artist: 'Artist', display: 'A', fullLabel: 'A – Artist' }
-        ];
-        songVisibility = { x: true };
-        rebuildChecklist();
-        const firstLabelText = songChecklist.textContent;
-        assert(firstLabelText.includes('A – Artist'), 'Checklist shows fullLabel');
-
-        songs = [
-          { id: 'a', title: 'A', artist: '', display: 'A', fullLabel: 'A' },
-          { id: 'b', title: 'B', artist: '', display: 'B', fullLabel: 'B' }
+          { id: 'a', title: 'A', artist: '', display: 'A' },
+          { id: 'b', title: 'B', artist: '', display: 'B' }
         ];
         songVisibility = { a: true, b: true };
         didInitRotation = false;
