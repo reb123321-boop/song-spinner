@@ -406,6 +406,7 @@
     // --- spinner sound + pointer flex ---
     const clickAudio = new Audio('sounds/click.mp3');
     const winAudio = new Audio('sounds/win.mp3');
+    const keyboardSpinAudio = new Audio('sounds/goodlucksusie.mp3');
     clickAudio.volume = 0.5;
     winAudio.volume = 0.6;
 
@@ -577,7 +578,6 @@
 
             ctx.translate(cx, cy);
             ctx.rotate(a + (texCfg?.rotate || 0));
-            ctx.scale(1, 1);
 
             ctx.fillStyle = pat;
             ctx.fillRect(-woodRadius, -woodRadius, woodRadius * 2, woodRadius * 2);
@@ -846,11 +846,11 @@
     };
 
     // Spin by clicking anywhere on the wheel
-    document.getElementById('wheelWrap').onclick = (e) => {
-      // prevent accidental spins when clicking controls layered above
+    document.getElementById('wheelWrap').onclick = () => {
       if (spinning) return;
       spin();
     };
+
     document.getElementById('toggleListBtn').onclick = () => { listOverlay.style.display = 'flex'; };
     document.getElementById('closeListBtn').onclick = () => { listOverlay.style.display = 'none'; };
 
@@ -953,6 +953,34 @@
       drawWheel();
     }
 
+    // Keyboard controls
+    function handleKeydown(e) {
+      // Ignore if spinning or if an overlay/dialog is open
+      if (spinning || listOverlay.style.display === 'flex') return;
+
+      // Ignore key presses when typing in inputs or checkboxes
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        // Spin immediately; play audio in parallel (no waiting)
+        spin();
+        try {
+          keyboardSpinAudio.currentTime = 0;
+          // play() can be blocked; never let that stop the spin
+          keyboardSpinAudio.play();
+        } catch (err) {}
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        removeLastSong();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeydown);
+
     // --- Tests (run in console) ---
     function runTests() {
       const saved = {
@@ -987,7 +1015,7 @@
           { id: '3', title: 'Fix You', artist: 'Acoustic', include: true }
         ];
         const counts = {};
-        mock.forEach(s => counts[s.title] = (counts[s.title] || 0) + 1);
+        mock.forEach(s => { counts[s.title] = (counts[s.title] || 0) + 1; });
         const displayFor = (title, artist) => (counts[title] > 1 && artist ? `${title} – ${artist}` : title);
         assert(displayFor('Yesterday', '') === 'Yesterday', 'Unambiguous title omits artist');
         assert(displayFor('Fix You', 'Coldplay') === 'Fix You – Coldplay', 'Ambiguous title includes artist');
@@ -1018,7 +1046,7 @@
         for (let i = 0; i < 50; i++) wheelScaleX = Math.min(1.15, +(wheelScaleX + 0.02).toFixed(3));
         assert(wheelScaleX <= 1.15, 'wheelScaleX upper bound');
 
-        // New tests: toggle list renders full detail text.
+        // Toggle list renders full detail text.
         songs = [
           { id: 't1', title: 'Song A', key: 'G', artist: 'Artist A', display: 'Song A', lyricsUrl: 'https://example.com' },
           { id: 't2', title: 'Song B', key: '', artist: 'Artist B', display: 'Song B', lyricsUrl: '' }
@@ -1033,6 +1061,48 @@
         didInitRotation = false;
         initRotationOnce();
         assert(didInitRotation === true, 'initRotationOnce sets flag');
+
+        // New tests: keyboard handler routes keys correctly without waiting for audio.
+        let spinCalls = 0;
+        let removeCalls = 0;
+        const realSpin = spin;
+        const realRemove = removeLastSong;
+        const realPlay = keyboardSpinAudio.play;
+
+        // Stub dependencies
+        spinning = false;
+        listOverlay.style.display = 'none';
+        keyboardSpinAudio.play = () => Promise.resolve();
+
+        // Stub actions
+        // eslint-disable-next-line no-global-assign
+        spin = () => { spinCalls++; };
+        // eslint-disable-next-line no-global-assign
+        removeLastSong = () => { removeCalls++; };
+
+        const mkEvt = (key) => ({
+          key,
+          preventDefaultCalled: false,
+          preventDefault() { this.preventDefaultCalled = true; }
+        });
+
+        const eRight = mkEvt('ArrowRight');
+        handleKeydown(eRight);
+        assert(eRight.preventDefaultCalled, 'ArrowRight calls preventDefault');
+        assert(spinCalls === 1, 'ArrowRight triggers spin()');
+        assert(removeCalls === 0, 'ArrowRight does not remove');
+
+        const eLeft = mkEvt('ArrowLeft');
+        handleKeydown(eLeft);
+        assert(eLeft.preventDefaultCalled, 'ArrowLeft calls preventDefault');
+        assert(removeCalls === 1, 'ArrowLeft triggers removeLastSong()');
+
+        // Restore
+        // eslint-disable-next-line no-global-assign
+        spin = realSpin;
+        // eslint-disable-next-line no-global-assign
+        removeLastSong = realRemove;
+        keyboardSpinAudio.play = realPlay;
 
         console.info('Song Spinner tests: OK');
       } finally {
@@ -1059,26 +1129,6 @@
     });
 
     runTests();
-
-    // Keyboard controls
-    document.addEventListener('keydown', (e) => {
-      // Ignore if spinning or if an overlay/dialog is open
-      if (spinning || listOverlay.style.display === 'flex') return;
-
-      // Ignore key presses when typing in inputs or checkboxes
-      const tag = document.activeElement?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        spin();
-      }
-
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        removeLastSong();
-      }
-    });
   </script>
 </body>
 </html>
