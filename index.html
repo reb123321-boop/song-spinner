@@ -257,6 +257,7 @@
     #toggleListBtn { background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 55%, #7c3aed 100%); }
     #deselectLastBtn { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 55%, #b91c1c 100%); }
     #spotifyBtn { background: linear-gradient(180deg, #86efac 0%, #22c55e 55%, #15803d 100%); }
+    #karaokeBtn { background: linear-gradient(180deg, #fde68a 0%, #facc15 55%, #ca8a04 100%); }
     #lyricsBtn { background: linear-gradient(180deg, #8ab4f8 0%, #4285f4 55%, #1a73e8 100%); }
     #editMasterListBtn { background: linear-gradient(180deg, #34d399 0%, #22c55e 55%, #16a34a 100%); }
     #spotifyBtn:hover { filter: brightness(1.15) saturate(1.1); }
@@ -348,6 +349,7 @@
         <!-- SPIN button removed: wheel itself is the spin control -->
         <button id="lyricsBtn" type="button">Open Lyrics</button>
         <button id="spotifyBtn" type="button">Open in Spotify</button>
+        <button id="karaokeBtn" type="button">Find Karaoke</button>
         <button id="deselectLastBtn" type="button">Remove Last Song</button>
       </div>
     </div>
@@ -866,12 +868,16 @@
       drawWheel();
     };
 
-    document.getElementById('deselectLastBtn').onclick = () => {
+    function removeLastSong() {
       if (!lastSpunId) return;
       songVisibility[lastSpunId] = false;
       overlay.style.display = 'none';
       rebuildChecklist();
       drawWheel();
+    }
+
+    document.getElementById('deselectLastBtn').onclick = () => {
+      removeLastSong();
     };
 
     document.getElementById('lyricsBtn').onclick = () => {
@@ -887,6 +893,16 @@
       if (!s) return;
 
       const query = encodeURIComponent([s.title, s.artist].filter(Boolean).join(' '));
+      const url = `https://open.spotify.com/search/${query}`;
+      window.open(url, '_blank', 'noopener');
+    };
+
+    document.getElementById('karaokeBtn').onclick = () => {
+      if (!lastSpunId) return;
+      const s = songs.find(x => x.id === lastSpunId);
+      if (!s) return;
+
+      const query = encodeURIComponent([s.title, s.artist, 'karaoke'].filter(Boolean).join(' '));
       const url = `https://open.spotify.com/search/${query}`;
       window.open(url, '_blank', 'noopener');
     };
@@ -1043,6 +1059,26 @@
     });
 
     runTests();
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      // Ignore if spinning or if an overlay/dialog is open
+      if (spinning || listOverlay.style.display === 'flex') return;
+
+      // Ignore key presses when typing in inputs or checkboxes
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        spin();
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        removeLastSong();
+      }
+    });
   </script>
 </body>
 </html>
